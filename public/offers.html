@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RBC | Offers &amp; Promotions</title>
+<link rel="stylesheet" href="/css/rbc-theme.css" />
+</head>
+<body>
+
+  <!-- Demo controls — not part of the "real" site -->
+  <div class="demo-controls">
+    <div class="container">
+      <span class="label">Demo Controls</span>
+      <label>Persona
+        <select id="persona-select"></select>
+      </label>
+      <span id="auth-status" class="status-pill"></span>
+      <div class="spacer">
+        <button id="sign-in-btn" class="btn-yellow">Sign In as Selected Persona</button>
+        <button id="sign-out-btn" class="btn-dark hidden">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="topbar">
+    <div class="container">
+      <span class="topbar-label">Personal Banking</span>
+      <div class="topbar-links">
+        <a href="#">Find a Branch</a>
+        <a href="#">Contact Us</a>
+        <a href="#">EN | FR</a>
+      </div>
+    </div>
+  </div>
+
+  <header class="navbar">
+    <div class="container">
+      <div class="brand">
+        <img src="https://www.rbcroyalbank.com/dvl/assets/images/logos/rbc-logo-shield.svg" alt="RBC" />
+        <span class="brand-name">RBC</span>
+        <span class="brand-sub">Royal Bank</span>
+      </div>
+      <nav class="nav-links">
+        <a href="/">Home</a>
+        <a href="/offers" class="active">Offers</a>
+        <a href="/mortgages">Mortgages</a>
+      </nav>
+      <button id="header-signin-btn" class="signin-btn">Sign In</button>
+    </div>
+  </header>
+
+  <div class="banner">
+    <div class="container">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span id="status-banner-text"></span>
+    </div>
+  </div>
+
+  <section class="hero">
+    <div class="container">
+      <p class="hero-eyebrow">Offers &amp; Promotions</p>
+      <h1>Deals picked out for you, this week.</h1>
+      <p>Explore current offers on banking, credit cards, and mortgages — apply online in minutes.</p>
+    </div>
+  </section>
+
+  <section class="container offers-section">
+    <div class="offers-heading-row">
+      <h2>Featured for you</h2>
+    </div>
+    <p class="offers-meta" id="fetch-meta"></p>
+    <div id="offers-grid"></div>
+  </section>
+
+  <section class="help-strip">
+    <div class="container">
+      <div>
+        <h3>Need help choosing?</h3>
+        <p>Book a free chat with an RBC advisor, available 24/7.</p>
+      </div>
+      <button class="btn btn-primary" style="width:auto;">Book an Appointment</button>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; 2026 Royal Bank of Canada — Prototype demo, not an official RBC product.</p>
+      <div class="footer-links">
+        <a href="#">Legal</a>
+        <a href="#">Privacy &amp; Security</a>
+        <a href="#">Accessibility</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/rbc-shared.js"></script>
+  <script>
+    const grid = document.getElementById('offers-grid');
+    const meta = document.getElementById('fetch-meta');
+
+    async function loadOffers() {
+      renderSkeleton(grid, 3);
+      meta.textContent = 'Requesting offers from Salesforce Personalization…';
+      try {
+        const { offers, anonymous, requestId } = await fetchOffers({
+          anchorType: 'Offers',
+          requestUrl: window.location.origin + '/offers'
+        });
+        if (anonymous) {
+          renderStateMessage(grid, 'Sign in above to see offers picked for you.');
+          meta.textContent = '';
+          return;
+        }
+        if (!offers.length) {
+          renderStateMessage(grid, 'No offers returned for this persona/context.');
+          meta.textContent = requestId ? `requestId: ${requestId}` : '';
+          return;
+        }
+        renderOfferCards(grid, offers);
+        meta.textContent = `requestId: ${requestId} · ${offers.length} offer(s) returned`;
+      } catch (err) {
+        renderStateMessage(grid, 'Could not load offers: ' + err.message, true);
+        meta.textContent = '';
+      }
+    }
+
+    renderHeaderChrome();
+    wireHeaderControls(loadOffers);
+    loadOffers();
+  </script>
+</body>
+</html>

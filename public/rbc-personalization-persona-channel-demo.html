@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RBC | Personalization Demo — Personas &amp; Channels</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          rbcnavy: '#00274D',
+          rbcblue: '#0059B3',
+          rbcskylight: '#EAF3FB',
+          rbcyellow: '#FFD200',
+        },
+        fontFamily: { sans: ['Helvetica Neue','Arial','sans-serif'] }
+      }
+    }
+  }
+</script>
+<style>
+  html { scroll-behavior: smooth; }
+  .modal-backdrop { background: rgba(0,20,40,0.55); }
+  .card-lift { transition: transform .2s ease, box-shadow .2s ease; }
+  .card-lift:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -8px rgba(0,39,77,0.25); }
+  @keyframes modalIn { from { opacity:0; transform: translateY(16px) scale(.98);} to { opacity:1; transform: translateY(0) scale(1);} }
+  .modal-anim { animation: modalIn .18s ease-out; }
+  @keyframes pulse { 0%,100% { opacity:1;} 50% { opacity:.5;} }
+  .skeleton { animation: pulse 1.4s ease-in-out infinite; background:#e2e8f0; border-radius:.5rem; }
+</style>
+</head>
+<body class="bg-white font-sans text-slate-800">
+
+  <!-- ===================================================================
+    DEMO CONTROL PANEL
+    Not part of the "real" website — this strip simulates the inputs a
+    real session would already have (who's logged in, which channel is
+    rendering). Swap this out entirely once wired to real auth/channel
+    context; only the API integration point below matters long-term.
+  =================================================================== -->
+  <div class="bg-slate-900 text-white text-xs">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
+      <span class="font-bold uppercase tracking-wide text-slate-400 mr-1">Demo Controls</span>
+
+      <label class="flex items-center gap-1.5">
+        <span class="text-slate-400">Persona</span>
+        <select id="persona-select" class="bg-slate-800 text-white text-xs rounded px-2 py-1 border border-slate-700">
+          <!-- populated by JS from PERSONAS config -->
+        </select>
+      </label>
+
+      <label class="flex items-center gap-1.5">
+        <span class="text-slate-400">Channel</span>
+        <select id="channel-select" class="bg-slate-800 text-white text-xs rounded px-2 py-1 border border-slate-700">
+          <!-- populated by JS from CHANNELS config -->
+        </select>
+      </label>
+
+      <span id="auth-status" class="ml-1 px-2 py-1 rounded bg-slate-800 border border-slate-700"></span>
+
+      <div class="ml-auto flex gap-2">
+        <button id="sign-in-btn" class="bg-rbcyellow text-rbcnavy font-semibold px-3 py-1.5 rounded hover:brightness-95 transition">Sign In as Selected Persona</button>
+        <button id="sign-out-btn" class="bg-slate-700 text-white font-semibold px-3 py-1.5 rounded hover:bg-slate-600 transition hidden">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top utility bar -->
+  <div class="bg-rbcnavy text-white text-xs">
+    <div class="max-w-6xl mx-auto px-4 py-1.5 flex justify-between items-center">
+      <span class="hidden sm:inline text-blue-100">Personal Banking</span>
+      <div class="flex items-center gap-4 ml-auto">
+        <a href="#" class="hover:underline text-blue-100">Find a Branch</a>
+        <a href="#" class="hover:underline text-blue-100">Contact Us</a>
+        <a href="#" class="hover:underline text-blue-100">EN | FR</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main nav -->
+  <header class="bg-rbcblue text-white sticky top-0 z-30 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <img src="https://www.rbcroyalbank.com/dvl/assets/images/logos/rbc-logo-shield.svg" alt="RBC" class="h-8 w-auto" />
+        <span class="text-xl font-bold tracking-tight">RBC</span>
+        <span class="hidden md:inline text-blue-100 font-light ml-2 pl-2 border-l border-blue-300/50">Royal Bank</span>
+      </div>
+      <nav class="hidden lg:flex items-center gap-6 text-sm font-medium">
+        <a href="#" class="hover:text-rbcyellow">Accounts</a>
+        <a href="#" class="hover:text-rbcyellow">Credit Cards</a>
+        <a href="#" class="hover:text-rbcyellow">Mortgages</a>
+        <a href="#" class="hover:text-rbcyellow">Investments</a>
+        <a href="#" class="text-rbcyellow font-semibold">Offers</a>
+      </nav>
+      <button id="header-signin-btn" class="bg-white text-rbcnavy text-sm font-semibold px-4 py-1.5 rounded hover:bg-blue-50 transition">
+        Sign In
+      </button>
+    </div>
+  </header>
+
+  <!-- Personalization / auth-state banner -->
+  <div id="status-banner" class="bg-rbcskylight border-b border-blue-100">
+    <div class="max-w-6xl mx-auto px-4 py-2.5 flex flex-wrap items-center gap-2 text-sm text-rbcnavy">
+      <svg class="w-4 h-4 text-rbcblue shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span id="status-banner-text">You're browsing as a guest — here are some of our most popular offers right now.</span>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <section class="bg-gradient-to-b from-rbcnavy to-rbcblue text-white">
+    <div class="max-w-6xl mx-auto px-4 py-12 md:py-16">
+      <p class="text-rbcyellow font-semibold text-sm tracking-wide uppercase mb-2">Offers &amp; Promotions</p>
+      <h1 class="text-3xl md:text-4xl font-bold max-w-2xl leading-tight">Deals picked out for you, this week.</h1>
+      <p class="mt-3 text-blue-100 max-w-xl">Explore a few of our current offers on banking, credit cards, and mortgages — apply online in minutes.</p>
+    </div>
+  </section>
+
+  <!-- Offers -->
+  <section class="max-w-6xl mx-auto px-4 py-10 md:py-14">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="text-xl md:text-2xl font-bold text-rbcnavy">Featured for you</h2>
+      <span id="channel-label" class="text-xs font-semibold text-rbcblue uppercase tracking-wide bg-rbcskylight px-2 py-1 rounded"></span>
+    </div>
+    <p id="fetch-meta" class="text-xs text-slate-500 mb-6"></p>
+
+    <div id="offers-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+
+    <!-- Advisor-only panel, shown only for the Branch Sales Tool channel -->
+    <div id="advisor-panel" class="hidden mt-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+      <p class="text-xs font-bold uppercase tracking-wide text-amber-700 mb-1">Advisor View Only</p>
+      <p id="advisor-note" class="text-sm text-amber-900"></p>
+    </div>
+  </section>
+
+  <!-- Help footer strip -->
+  <section class="bg-rbcskylight">
+    <div class="max-w-6xl mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div>
+        <h3 class="font-bold text-rbcnavy">Need help choosing?</h3>
+        <p class="text-sm text-slate-600">Book a free chat with an RBC advisor, available 24/7.</p>
+      </div>
+      <button class="bg-rbcblue text-white text-sm font-semibold px-5 py-2.5 rounded hover:bg-rbcnavy transition">Book an Appointment</button>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-rbcnavy text-blue-200 text-xs">
+    <div class="max-w-6xl mx-auto px-4 py-6 flex flex-col sm:flex-row justify-between gap-3">
+      <p>&copy; 2026 Royal Bank of Canada — Prototype demo, not an official RBC product.</p>
+      <div class="flex gap-4">
+        <a href="#" class="hover:underline">Legal</a>
+        <a href="#" class="hover:underline">Privacy &amp; Security</a>
+        <a href="#" class="hover:underline">Accessibility</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal -->
+  <div id="modal-backdrop" class="fixed inset-0 modal-backdrop hidden items-center justify-center z-50 p-4">
+    <div id="modal-panel" class="modal-anim bg-white rounded-lg shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+<script>
+  // =====================================================================
+  // CONFIG — replace with your real data
+  // =====================================================================
+
+  // TODO: replace with your 5 real personas (name + Data 360 customer ID).
+  // "segment" is just a demo label used to pick a plausible mock offer
+  // ranking below — it has no meaning to a real Personalization call.
+  const PERSONAS = [
+    { id: 'persona-1', name: 'Veronica Robles',     customerId: 'MDM-RBC-0000006194', segment: 'Young Professional' },
+    { id: 'persona-2', name: 'Guillaume Bouchard',    customerId: 'MDM-RBC-0000002186', segment: 'New Homeowner' },
+    { id: 'persona-3', name: 'Benjamin Trevino',   customerId: 'MDM-RBC-0000004975', segment: 'Small Business Owner' },
+    { id: 'persona-4', name: 'Elizabeth Barrett',   customerId: 'MDM-RBC-0000001463', segment: 'Retiree' },
+    { id: 'persona-5', name: 'Kevin Webb',    customerId: 'MDM-RBC-0000005392', segment: 'Student' },
+  ];
+
+  const CHANNELS = [
+    { id: 'ob-banner',   label: 'Online Banking — Banner',        maxOffers: 1 },
+    { id: 'ob-offers',   label: 'Online Banking — Financial Offers', maxOffers: 3 },
+    { id: 'email',       label: 'Email',                          maxOffers: 3 },
+    { id: 'mobile',      label: 'Mobile App',                     maxOffers: 2 },
+    { id: 'branch',      label: 'Branch Sales Tool',              maxOffers: 3 },
+  ];
+
+  // Offer content pool. In production this text/imagery would come back
+  // inside the API payload itself — it's defined here only because this
+  // demo's mock layer needs something to return.
+  const OFFER_POOL = {
+    'chequing-ipad': {
+      id: 'chequing-ipad', category: 'Bank Accounts', badge: 'Limited Time', icon: '🏦',
+      title: 'Open a Chequing Account, Get a New iPad',
+      subtitle: 'Eligible new RBC chequing clients',
+      summary: 'Open an eligible RBC chequing account and set up a qualifying direct deposit to receive a new iPad, on us.',
+      details: [
+        'Available to new RBC personal banking clients who open an eligible chequing account.',
+        'Set up a recurring direct deposit within the offer period.',
+        'Complete a minimum number of debit transactions each month to stay eligible.',
+        'Reward is fulfilled after all account and activity conditions are met and verified.'
+      ],
+      disclaimer: 'Offer available for a limited time and subject to change or withdrawal without notice.',
+      cta: 'View Chequing Accounts'
+    },
+    'avion-welcome': {
+      id: 'avion-welcome', category: 'Credit Cards', badge: 'Popular', icon: '💳',
+      title: 'RBC Avion Visa Infinite — Welcome Bonus Points',
+      subtitle: 'New Avion Visa Infinite cardholders',
+      summary: 'Apply and get approved for the Avion Visa Infinite card, then earn bonus Avion points after your first purchase within 90 days.',
+      details: [
+        'Welcome bonus points are credited after your first eligible purchase posts to the new account.',
+        'Earn points on every dollar spent, with bonus categories on travel and dining.',
+        'First-year annual fee may be waived for new cardholders.',
+        'Includes travel medical insurance and airport lounge access, subject to plan terms.'
+      ],
+      disclaimer: 'Approval subject to credit qualification. Terms in effect at time of application apply.',
+      cta: 'Explore Avion Visa Infinite'
+    },
+    'mortgage-value': {
+      id: 'mortgage-value', category: 'Mortgages', badge: 'Limited Time', icon: '🏠',
+      title: 'Get Up to $5,900 in Value with an Eligible Mortgage',
+      subtitle: 'New and switching mortgage clients',
+      summary: 'Take out or switch an eligible RBC mortgage and access a bundle of value, including rate discounts, cash back, and account credits.',
+      details: [
+        'Combined value may include a rate discount, a cash-back amount, and fee credits.',
+        'Available on new purchase mortgages and mortgages switched to RBC.',
+        'A minimum mortgage amount and term length may apply.',
+        'Speak with a mortgage specialist to confirm which components apply.'
+      ],
+      disclaimer: 'Value amount is an estimate and may vary by mortgage amount, term, and province.',
+      cta: 'Talk to a Mortgage Specialist'
+    },
+    'business-credit-line': {
+      id: 'business-credit-line', category: 'Business Banking', badge: 'For Business', icon: '💼',
+      title: 'RBC Business Line of Credit — Fee-Free First Year',
+      subtitle: 'Eligible small business owners',
+      summary: 'Open a business line of credit and get the first year\u2019s admin fee waived, with flexible access to funds as your business grows.',
+      details: [
+        'Available to eligible new and existing RBC business banking clients.',
+        'First-year admin fee waived at account opening.',
+        'Draw funds as needed; interest is charged only on the amount used.',
+        'Business plan or financials may be required for larger credit limits.'
+      ],
+      disclaimer: 'Subject to credit approval. Business banking eligibility criteria apply.',
+      cta: 'Explore Business Credit'
+    },
+    'rrsp-investment': {
+      id: 'rrsp-investment', category: 'Investments', badge: 'Popular', icon: '📈',
+      title: 'Get a Cash Bonus for Contributing to an RRSP or TFSA',
+      subtitle: 'Eligible RBC investment clients',
+      summary: 'Contribute new funds to an eligible RBC RRSP or TFSA and receive a cash bonus based on your contribution amount.',
+      details: [
+        'Available on new deposits into an eligible RRSP or TFSA account.',
+        'Bonus amount scales with the size of the qualifying contribution.',
+        'Funds must remain in the account through the required holding period.',
+        'Speak with an advisor to confirm which account type suits your goals.'
+      ],
+      disclaimer: 'Investment products are not insured, may lose value, and are subject to market risk. Terms apply.',
+      cta: 'Explore RRSPs &amp; TFSAs'
+    }
+  };
+
+  // Ranked offer IDs per persona segment, and a generic anonymous ranking.
+  const PERSONA_OFFER_RANKING = {
+    'persona-1': ['avion-welcome', 'chequing-ipad', 'rrsp-investment'],
+    'persona-2': ['mortgage-value', 'chequing-ipad', 'avion-welcome'],
+    'persona-3': ['business-credit-line', 'avion-welcome', 'chequing-ipad'],
+    'persona-4': ['rrsp-investment', 'mortgage-value', 'chequing-ipad'],
+    'persona-5': ['chequing-ipad', 'avion-welcome', 'rrsp-investment'],
+  };
+  const ANONYMOUS_OFFER_RANKING = ['chequing-ipad', 'avion-welcome', 'mortgage-value'];
+
+  const ADVISOR_NOTES = {
+    'persona-1': 'Recently viewed travel rewards content online. Good candidate for Avion upsell.',
+    'persona-2': 'Pre-approved mortgage rate on file expires in 30 days — prioritize this conversation.',
+    'persona-3': 'Business account opened 6 months ago; no credit product yet.',
+    'persona-4': 'Long-standing client; RRSP contribution room available for this tax year.',
+    'persona-5': 'New-to-bank client, first product only. Good candidate for onboarding offers.',
+    anonymous: 'No profile matched — showing generic top offers only.'
+  };
+
+  // =====================================================================
+  // MOCK SALESFORCE PERSONALIZATION SDK/API CALL
+  //
+  // Replace the body of this function with a real call, e.g.:
+  //
+  //   async function fetchPersonalizationOffers({ customerId, channel }) {
+  //     const res = await fetch('https://<your-personalization-endpoint>/offers', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ customerId, channel })
+  //     });
+  //     return res.json(); // expect { offers: [...] }
+  //   }
+  //
+  // Everything else in this file (rendering, modal, state) only depends
+  // on getting back { offers: [...] } shaped like OFFER_POOL entries, so
+  // swapping this one function is the entire integration.
+  // =====================================================================
+  function fetchPersonalizationOffers({ customerId, channel }) {
+    const channelConfig = CHANNELS.find(c => c.id === channel) || CHANNELS[0];
+    const isAnonymous = !customerId;
+    const persona = PERSONAS.find(p => p.customerId === customerId);
+    const ranking = isAnonymous
+      ? ANONYMOUS_OFFER_RANKING
+      : (PERSONA_OFFER_RANKING[persona ? persona.id : ''] || ANONYMOUS_OFFER_RANKING);
+
+    const offers = ranking.slice(0, channelConfig.maxOffers).map(id => OFFER_POOL[id]);
+
+    const payload = {
+      offers,
+      meta: {
+        customerId: customerId || null,
+        channel,
+        decisionId: 'mock-' + Math.random().toString(36).slice(2, 10),
+        source: isAnonymous ? 'anonymous-default-ranking' : 'persona-ranking-mock'
+      }
+    };
+
+    // Simulated network latency so the loading skeleton is visible.
+    return new Promise(resolve => setTimeout(() => resolve(payload), 450));
+  }
+
+  // =====================================================================
+  // STATE
+  // =====================================================================
+  let state = {
+    personaId: PERSONAS[0].id,
+    channel: CHANNELS[0].id,
+    signedIn: false,
+  };
+  let currentOffers = [];
+
+  // =====================================================================
+  // DOM refs
+  // =====================================================================
+  const personaSelect = document.getElementById('persona-select');
+  const channelSelect = document.getElementById('channel-select');
+  const authStatusEl = document.getElementById('auth-status');
+  const signInBtn = document.getElementById('sign-in-btn');
+  const signOutBtn = document.getElementById('sign-out-btn');
+  const headerSignInBtn = document.getElementById('header-signin-btn');
+  const statusBannerText = document.getElementById('status-banner-text');
+  const channelLabel = document.getElementById('channel-label');
+  const fetchMeta = document.getElementById('fetch-meta');
+  const offersGrid = document.getElementById('offers-grid');
+  const advisorPanel = document.getElementById('advisor-panel');
+  const advisorNote = document.getElementById('advisor-note');
+  const backdrop = document.getElementById('modal-backdrop');
+  const modalContent = document.getElementById('modal-content');
+
+  // =====================================================================
+  // Populate selects
+  // =====================================================================
+  PERSONAS.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = `${p.name} (${p.customerId}) — ${p.segment}`;
+    personaSelect.appendChild(opt);
+  });
+  CHANNELS.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.label;
+    channelSelect.appendChild(opt);
+  });
+  personaSelect.value = state.personaId;
+  channelSelect.value = state.channel;
+
+  // =====================================================================
+  // Render offers grid
+  // =====================================================================
+  function renderSkeleton(count) {
+    offersGrid.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+      const s = document.createElement('div');
+      s.className = 'skeleton h-72';
+      offersGrid.appendChild(s);
+    }
+  }
+
+  function renderOffers(offersArray) {
+    currentOffers = offersArray;
+    offersGrid.innerHTML = '';
+    offersArray.forEach(offer => {
+      const card = document.createElement('div');
+      card.className = 'card-lift bg-white border border-slate-200 rounded-lg overflow-hidden flex flex-col';
+      card.innerHTML = `
+        <div class="h-32 bg-rbcskylight flex items-center justify-center text-5xl">${offer.icon}</div>
+        <div class="p-5 flex flex-col flex-1">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-[11px] font-bold uppercase tracking-wide bg-rbcyellow text-rbcnavy px-2 py-0.5 rounded">${offer.badge}</span>
+            <span class="text-[11px] text-slate-500 uppercase tracking-wide">${offer.category}</span>
+          </div>
+          <h3 class="font-bold text-rbcnavy text-base leading-snug mb-1">${offer.title}</h3>
+          <p class="text-sm text-slate-600 mb-4 flex-1">${offer.summary}</p>
+          <button data-offer="${offer.id}" class="view-details-btn mt-auto w-full bg-rbcblue text-white text-sm font-semibold py-2.5 rounded hover:bg-rbcnavy transition">View Details</button>
+        </div>`;
+      offersGrid.appendChild(card);
+    });
+  }
+
+  // =====================================================================
+  // Core refresh: pulls current state, calls the (mock) API, re-renders
+  // =====================================================================
+  async function refresh() {
+    const persona = PERSONAS.find(p => p.id === state.personaId);
+    const channelConfig = CHANNELS.find(c => c.id === state.channel);
+    const customerId = state.signedIn ? persona.customerId : null;
+
+    // ---- header / banner / auth status ----
+    if (state.signedIn) {
+      authStatusEl.textContent = `Signed in: ${persona.name} (${persona.customerId})`;
+      statusBannerText.textContent = `Welcome back, ${persona.name}. Here are offers picked for you.`;
+      signInBtn.classList.add('hidden');
+      signOutBtn.classList.remove('hidden');
+      headerSignInBtn.textContent = persona.name.split(' ')[0];
+    } else {
+      authStatusEl.textContent = 'Anonymous';
+      statusBannerText.textContent = "You're browsing as a guest — here are some of our most popular offers right now.";
+      signInBtn.classList.remove('hidden');
+      signOutBtn.classList.add('hidden');
+      headerSignInBtn.textContent = 'Sign In';
+    }
+
+    channelLabel.textContent = channelConfig.label;
+
+    // ---- advisor-only panel, branch channel only ----
+    if (channelConfig.id === 'branch') {
+      advisorPanel.classList.remove('hidden');
+      advisorNote.textContent = state.signedIn
+        ? (ADVISOR_NOTES[persona.id] || '')
+        : ADVISOR_NOTES.anonymous;
+    } else {
+      advisorPanel.classList.add('hidden');
+    }
+
+    // ---- fetch + render ----
+    renderSkeleton(channelConfig.maxOffers);
+    fetchMeta.textContent = 'Requesting offers from Salesforce Personalization…';
+
+    const result = await fetchPersonalizationOffers({ customerId, channel: state.channel });
+    renderOffers(result.offers);
+    fetchMeta.textContent = `decisionId: ${result.meta.decisionId} · source: ${result.meta.source} · channel: ${result.meta.channel}`;
+  }
+
+  // =====================================================================
+  // Event wiring
+  // =====================================================================
+  personaSelect.addEventListener('change', () => {
+    state.personaId = personaSelect.value;
+    state.signedIn = false; // switching persona always resets to anonymous
+    refresh();
+  });
+
+  channelSelect.addEventListener('change', () => {
+    state.channel = channelSelect.value;
+    refresh();
+  });
+
+  function doSignIn() { state.signedIn = true; refresh(); }
+  function doSignOut() { state.signedIn = false; refresh(); }
+
+  signInBtn.addEventListener('click', doSignIn);
+  signOutBtn.addEventListener('click', doSignOut);
+  headerSignInBtn.addEventListener('click', () => {
+    if (state.signedIn) doSignOut(); else doSignIn();
+  });
+
+  offersGrid.addEventListener('click', (e) => {
+    const btn = e.target.closest('.view-details-btn');
+    if (btn) openModal(btn.dataset.offer);
+  });
+
+  function openModal(offerId) {
+    const offer = currentOffers.find(o => o.id === offerId);
+    if (!offer) return;
+
+    modalContent.innerHTML = `
+      <div class="bg-rbcnavy text-white px-6 py-5 flex items-start justify-between rounded-t-lg">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wide bg-rbcyellow text-rbcnavy px-2 py-0.5 rounded">${offer.badge}</span>
+          <h3 class="text-lg font-bold mt-2 leading-snug">${offer.title}</h3>
+          <p class="text-blue-100 text-sm mt-1">${offer.subtitle}</p>
+        </div>
+        <button id="modal-close" aria-label="Close" class="text-blue-100 hover:text-white text-2xl leading-none px-1">&times;</button>
+      </div>
+      <div class="p-6">
+        <p class="text-slate-700 mb-4">${offer.summary}</p>
+        <h4 class="font-semibold text-rbcnavy text-sm uppercase tracking-wide mb-2">How it works</h4>
+        <ul class="space-y-2 mb-5">
+          ${offer.details.map(d => `<li class="flex gap-2 text-sm text-slate-700"><span class="text-rbcblue mt-0.5">&#10003;</span><span>${d}</span></li>`).join('')}
+        </ul>
+        <div class="bg-rbcskylight border border-blue-100 rounded p-3 mb-5">
+          <p class="text-xs text-slate-600">${offer.disclaimer}</p>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button id="modal-apply" class="flex-1 bg-rbcblue text-white font-semibold py-2.5 rounded hover:bg-rbcnavy transition">${offer.cta}</button>
+          <button id="modal-dismiss" class="flex-1 border border-slate-300 text-slate-700 font-semibold py-2.5 rounded hover:bg-slate-50 transition">Maybe Later</button>
+        </div>
+      </div>`;
+
+    backdrop.classList.remove('hidden');
+    backdrop.classList.add('flex');
+    document.body.classList.add('overflow-hidden');
+
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    document.getElementById('modal-dismiss').addEventListener('click', closeModal);
+    document.getElementById('modal-apply').addEventListener('click', () => {
+      alert('Prototype only — in the real experience this opens the application flow for: ' + offer.title);
+    });
+  }
+
+  function closeModal() {
+    backdrop.classList.add('hidden');
+    backdrop.classList.remove('flex');
+    document.body.classList.remove('overflow-hidden');
+  }
+
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+  // ---- initial load ----
+  refresh();
+</script>
+</body>
+</html>

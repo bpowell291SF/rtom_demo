@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Salesforce Personalization – Request Decisions</title>
+  <style>
+    :root {
+      --sf-blue: #0176d3;
+      --sf-blue-dark: #0a2240;
+      --sf-gray: #3e3e3c;
+      --bg: #f3f3f3;
+      --card: #fff;
+      --border: #dddbda;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      margin: 0;
+      background: var(--bg);
+      color: var(--sf-gray);
+      min-height: 100vh;
+    }
+    .header {
+      background: var(--sf-blue-dark);
+      color: #fff;
+      padding: 1rem 2rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
+    .header p { margin: 0.25rem 0 0; opacity: 0.9; font-size: 0.875rem; }
+    .container { max-width: 720px; margin: 0 auto; padding: 2rem; }
+    .card {
+      background: var(--card);
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .card h2 { margin: 0 0 1rem; font-size: 1rem; color: var(--sf-blue); }
+    label { display: block; margin-bottom: 0.25rem; font-size: 0.875rem; font-weight: 500; }
+    input, select {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    button {
+      background: var(--sf-blue);
+      color: #fff;
+      border: none;
+      padding: 0.6rem 1.25rem;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: #014a8f; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .response {
+      background: #f9f9f9;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1rem;
+      font-family: 'Monaco', 'Consolas', monospace;
+      font-size: 0.75rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 400px;
+      overflow: auto;
+    }
+    .response.success { border-color: #2e844a; background: #f3f9f4; }
+    .response.error { border-color: #c23934; background: #fef3f2; }
+    .meta { font-size: 0.75rem; color: #666; margin-bottom: 0.5rem; }
+    .personalization-block { margin-bottom: 1rem; padding: 0.75rem; background: #fff; border-radius: 4px; border: 1px solid var(--border); }
+    .personalization-block h3 { margin: 0 0 0.5rem; font-size: 0.875rem; }
+    .link { color: var(--sf-blue); }
+    .link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>Salesforce Personalization</h1>
+    <p>Request personalized decisions from the Decisioning API (Data Cloud). <a class="link" href="https://help.salesforce.com/s/articleView?id=mktg.mc_persnl.htm&type=5" target="_blank" rel="noopener">Help</a> · <a class="link" href="https://developer.salesforce.com/docs/marketing/einstein-personalization/guide/decisioning-api-request-personalization.html" target="_blank" rel="noopener">API docs</a> · <a class="link" href="/interactions-sdk">Interactions Web SDK demo</a> · <a class="link" href="/ads-carousel">Ads carousel page</a> · <a class="link" href="/ads-carousel-variables">Carousel variables</a> · <a class="link" href="/xero-accounting-software">Xero-style landing (image carousel)</a></p>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h2>Request personalization</h2>
+      <form id="request-form">
+        <div class="row">
+          <div>
+            <label for="individualId">Individual ID *</label>
+            <input type="text" id="individualId" name="individualId" placeholder="e.g. 001xx000001AbC" required>
+          </div>
+          <div>
+            <label for="dataspace">Dataspace *</label>
+            <input type="text" id="dataspace" name="dataspace" placeholder="e.g. Banking" required>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="personalizationPointName">Personalization point (name)</label>
+            <input type="text" id="personalizationPointName" name="personalizationPointName" placeholder="API name of personalization point">
+          </div>
+          <div>
+            <label for="personalizationPointId">Personalization point (ID)</label>
+            <input type="text" id="personalizationPointId" name="personalizationPointId" placeholder="Core ID (optional)">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="anchorId">Anchor ID</label>
+            <input type="text" id="anchorId" name="anchorId" placeholder="Optional">
+          </div>
+          <div>
+            <label for="anchorType">Anchor type</label>
+            <input type="text" id="anchorType" name="anchorType" placeholder="Optional">
+          </div>
+        </div>
+        <div>
+          <label for="requestUrl">Request URL (optional)</label>
+          <input type="text" id="requestUrl" name="requestUrl" placeholder="e.g. https://bank.example/offers">
+        </div>
+        <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+          <input type="checkbox" id="enableDiagnostics" name="enableDiagnostics">
+          <span>Enable diagnostics in response</span>
+        </label>
+        <button type="submit" id="submit-btn">Request personalization</button>
+      </form>
+    </div>
+
+    <div class="card" id="result-card" style="display: none;">
+      <h2>Response</h2>
+      <p class="meta" id="result-meta"></p>
+      <div id="result-personalizations"></div>
+      <pre class="response" id="result-raw"></pre>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('request-form');
+    const resultCard = document.getElementById('result-card');
+    const resultMeta = document.getElementById('result-meta');
+    const resultPersonalizations = document.getElementById('result-personalizations');
+    const resultRaw = document.getElementById('result-raw');
+    const submitBtn = document.getElementById('submit-btn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('personalizationPointName').value.trim();
+      const id = document.getElementById('personalizationPointId').value.trim();
+      if (!name && !id) {
+        alert('Provide at least one of Personalization point name or ID.');
+        return;
+      }
+      submitBtn.disabled = true;
+      resultCard.style.display = 'block';
+      resultMeta.textContent = 'Loading…';
+      resultPersonalizations.innerHTML = '';
+      resultRaw.textContent = '';
+
+      const body = {
+        individualId: document.getElementById('individualId').value.trim(),
+        dataspace: document.getElementById('dataspace').value.trim(),
+        personalizationPointName: name || undefined,
+        personalizationPointId: id || undefined,
+        anchorId: document.getElementById('anchorId').value.trim() || undefined,
+        anchorType: document.getElementById('anchorType').value.trim() || undefined,
+        requestUrl: document.getElementById('requestUrl').value.trim() || undefined,
+        enableDiagnostics: document.getElementById('enableDiagnostics').checked
+      };
+
+      try {
+        const res = await fetch('/api/personalization/request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        resultRaw.textContent = JSON.stringify(data, null, 2);
+        resultRaw.className = 'response ' + (data.success ? 'success' : 'error');
+        resultMeta.textContent = data.success
+          ? 'Request ID: ' + (data.requestId || '—') + ' · ' + (data.personalizations?.length || 0) + ' personalization(s)'
+          : 'Error: ' + (data.error || res.status);
+
+        if (data.success && data.personalizations && data.personalizations.length) {
+          resultPersonalizations.innerHTML = data.personalizations.map((p, i) => `
+            <div class="personalization-block">
+              <h3>${p.personalizationPointName || p.personalizationPointId || ('Personalization ' + (i + 1))}</h3>
+              ${p.data && p.data.length ? '<pre style="margin:0;font-size:0.75rem;">' + JSON.stringify(p.data, null, 2) + '</pre>' : ''}
+              ${p.attributes && Object.keys(p.attributes).length ? '<p style="margin:0.5rem 0 0;"><strong>Attributes:</strong> ' + JSON.stringify(p.attributes) + '</p>' : ''}
+            </div>
+          `).join('');
+        }
+      } catch (err) {
+        resultMeta.textContent = 'Request failed';
+        resultRaw.textContent = err.message;
+        resultRaw.className = 'response error';
+      }
+      submitBtn.disabled = false;
+    });
+  </script>
+</body>
+</html>
