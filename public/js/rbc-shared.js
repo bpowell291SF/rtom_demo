@@ -200,10 +200,34 @@ function renderOfferCards(containerEl, offers) {
 }
 
 // ---------------------------------------------------------------------
-// Quick-view modal — shows the real fields, then links out to the real
-// ssot__CallToActionUrl__c (does not fabricate details/disclaimers,
-// since the real API doesn't provide those fields).
+// Offer feedback — 4 responses, logged server-side (POST /api/offers/feedback),
+// then the customer lands on offerslog.html?response=... which shows a
+// confirmation message. Link-based (not AJAX-only) so this also works from
+// a static channel like email, where there's no JS to run.
 // ---------------------------------------------------------------------
+const FEEDBACK_OPTIONS = [
+  { value: 'interested',      label: 'Interested' },
+  { value: 'not_interested',  label: 'Not Interested' },
+  { value: 'need_more_info',  label: 'Need More Information' },
+  { value: 'maybe_later',     label: 'Maybe Later' },
+];
+
+function buildOfferLogUrl(offer, responseValue, channel) {
+  const persona = currentPersona();
+  const state = getState();
+  const params = new URLSearchParams({
+    response: responseValue,
+    offerId: offer.id || '',
+    contentId: offer.contentId || '',
+    individualId: state.signedIn ? persona.customerId : '',
+    dataspace: RBC_CONFIG.dataspace,
+    channel: channel || 'unknown',
+    offerName: offer.heading || offer.name || '',
+  });
+  return '/offerslog.html?' + params.toString();
+}
+
+
 function ensureModalMounted() {
   if (document.getElementById('rbc-modal-backdrop')) return;
   const div = document.createElement('div');
@@ -218,6 +242,10 @@ function ensureModalMounted() {
           <h3 id="rbc-modal-heading"></h3>
           <p id="rbc-modal-body"></p>
           <a id="rbc-modal-cta" class="btn btn-primary" target="_blank" rel="noopener">Learn More</a>
+          <div class="modal-feedback">
+            <p class="modal-feedback-label">What do you think of this offer?</p>
+            <div class="modal-feedback-buttons" id="rbc-modal-feedback"></div>
+          </div>
         </div>
       </div>
     </div>`;
@@ -237,6 +265,13 @@ function openQuickView(offer) {
   const cta = document.getElementById('rbc-modal-cta');
   cta.textContent = offer.ctaText || 'Learn More';
   cta.href = offer.ctaUrl || '#';
+
+  const channel = getState().channel || 'unknown';
+  const feedbackEl = document.getElementById('rbc-modal-feedback');
+  feedbackEl.innerHTML = FEEDBACK_OPTIONS.map(opt =>
+    `<a href="${buildOfferLogUrl(offer, opt.value, channel)}" class="btn btn-outline feedback-btn">${opt.label}</a>`
+  ).join('');
+
   document.getElementById('rbc-modal-backdrop').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
