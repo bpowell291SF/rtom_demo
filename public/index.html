@@ -6,7 +6,7 @@
 <title>RBC | Personal Banking</title>
 <link rel="stylesheet" href="/css/rbc-theme.css" />
 </head>
-  <script type="text/javascript" src="https://cdn.c360a.salesforce.com/beacon/c360a/6ac190d2-56d8-4600-8e83-007537e3f2ff/scripts/c360a.min.js"></script> 
+<script type="text/javascript" src="https://cdn.c360a.salesforce.com/beacon/c360a/6ac190d2-56d8-4600-8e83-007537e3f2ff/scripts/c360a.min.js"></script> 
 <body>
 
   <!-- Demo controls — not part of the "real" site -->
@@ -127,6 +127,7 @@
       }
     }
 
+    setState({ channel: 'home' });
     renderHeaderChrome();
     wireHeaderControls(loadFeatured);
     loadFeatured();

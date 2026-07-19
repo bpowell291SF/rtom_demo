@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RBC | Thank You</title>
+<link rel="stylesheet" href="/css/rbc-theme.css" />
+<style>
+  .confirm-wrap { min-height: 70vh; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; }
+  .confirm-card { max-width: 32rem; width: 100%; background: #fff; border: 1px solid var(--slate-200); border-radius: 0.5rem; padding: 2rem; text-align: center; }
+  .confirm-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+  .confirm-card h1 { color: var(--rbc-navy); font-size: 1.375rem; margin: 0 0 0.75rem; }
+  .confirm-card p { color: var(--slate-600); margin: 0 0 1.5rem; }
+  .confirm-meta { font-size: 0.75rem; color: var(--slate-500); margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--slate-200); }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="container">
+      <span class="topbar-label">Personal Banking</span>
+      <div class="topbar-links">
+        <a href="#">Find a Branch</a>
+        <a href="#">Contact Us</a>
+        <a href="#">EN | FR</a>
+      </div>
+    </div>
+  </div>
+
+  <header class="navbar">
+    <div class="container">
+      <div class="brand">
+        <img src="https://www.rbcroyalbank.com/dvl/assets/images/logos/rbc-logo-shield.svg" alt="RBC" />
+        <span class="brand-name">RBC</span>
+        <span class="brand-sub">Royal Bank</span>
+      </div>
+      <nav class="nav-links">
+        <a href="/">Home</a>
+        <a href="/offers">Offers</a>
+        <a href="/mortgages">Mortgages</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="confirm-wrap">
+    <div class="confirm-card">
+      <div class="confirm-icon" id="confirm-icon">✅</div>
+      <h1 id="confirm-heading">Thanks for letting us know</h1>
+      <p id="confirm-message">We've recorded your response.</p>
+      <a href="/offers" class="btn btn-primary" style="display:inline-block; width:auto; padding:0.625rem 1.5rem;">Browse more offers</a>
+      <p class="confirm-meta" id="confirm-meta"></p>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; 2026 Royal Bank of Canada — Prototype demo, not an official RBC product.</p>
+      <div class="footer-links">
+        <a href="#">Legal</a>
+        <a href="#">Privacy &amp; Security</a>
+        <a href="#">Accessibility</a>
+      </div>
+    </div>
+  </footer>
+
+<script>
+  // Messages shown per response value. Keep in sync with FEEDBACK_OPTIONS
+  // in /js/rbc-shared.js if you rename or add response types.
+  const MESSAGES = {
+    interested: {
+      icon: '🎉',
+      heading: 'Great — we\u2019ll follow up!',
+      message: 'Thanks for your interest. An RBC representative or your online banking will follow up with next steps on this offer.',
+    },
+    not_interested: {
+      icon: '👍',
+      heading: 'Thanks for the feedback',
+      message: 'We\u2019ve noted that this offer isn\u2019t a fit right now. We\u2019ll use this to show you more relevant offers in the future.',
+    },
+    need_more_info: {
+      icon: '📩',
+      heading: 'We\u2019ll send more details',
+      message: 'Thanks for asking — we\u2019ll follow up with more information about this offer soon.',
+    },
+    maybe_later: {
+      icon: '⏰',
+      heading: 'No problem — we\u2019ll check back',
+      message: 'We\u2019ll leave this offer available for you and check in again later.',
+    },
+  };
+
+  const params = new URLSearchParams(window.location.search);
+  const response = params.get('response');
+  const offerId = params.get('offerId') || '';
+  const contentId = params.get('contentId') || '';
+  const individualId = params.get('individualId') || '';
+  const dataspace = params.get('dataspace') || '';
+  const channel = params.get('channel') || '';
+  const offerName = params.get('offerName') || '';
+
+  const meta = document.getElementById('confirm-meta');
+  const iconEl = document.getElementById('confirm-icon');
+  const headingEl = document.getElementById('confirm-heading');
+  const messageEl = document.getElementById('confirm-message');
+
+  const known = MESSAGES[response];
+  if (known) {
+    iconEl.textContent = known.icon;
+    headingEl.textContent = known.heading;
+    messageEl.textContent = offerName ? `${known.message} (${offerName})` : known.message;
+  } else {
+    iconEl.textContent = 'ℹ️';
+    headingEl.textContent = 'No response recorded';
+    messageEl.textContent = 'This link is missing a valid response value, so nothing was logged.';
+  }
+
+  async function logFeedback() {
+    if (!known) return; // don't call the API with an invalid/missing response
+    meta.textContent = 'Recording your response…';
+    try {
+      const res = await fetch('/api/offers/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ individualId, dataspace, offerId, contentId, response, channel, offerName })
+      });
+      const data = await res.json();
+      meta.textContent = data.success
+        ? 'Your response has been recorded.'
+        : 'We couldn\u2019t confirm this was logged, but thanks for your response.';
+    } catch (err) {
+      meta.textContent = 'We couldn\u2019t confirm this was logged, but thanks for your response.';
+    }
+  }
+
+  logFeedback();
+</script>
+</body>
+</html>

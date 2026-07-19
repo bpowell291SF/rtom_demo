@@ -6,7 +6,6 @@
 <title>RBC | Offers &amp; Promotions</title>
 <link rel="stylesheet" href="/css/rbc-theme.css" />
 </head>
-  <script type="text/javascript" src="https://cdn.c360a.salesforce.com/beacon/c360a/6ac190d2-56d8-4600-8e83-007537e3f2ff/scripts/c360a.min.js"></script> 
 <body>
 
   <!-- Demo controls — not part of the "real" site -->
@@ -46,6 +45,7 @@
         <a href="/">Home</a>
         <a href="/offers" class="active">Offers</a>
         <a href="/mortgages">Mortgages</a>
+        <a href="/rtom.html" style="color:#f9c23c;font-weight:700;">RTOM</a>
       </nav>
       <button id="header-signin-btn" class="signin-btn">Sign In</button>
     </div>
@@ -128,6 +128,7 @@
       }
     }
 
+    setState({ channel: 'offers' });
     renderHeaderChrome();
     wireHeaderControls(loadOffers);
     loadOffers();
