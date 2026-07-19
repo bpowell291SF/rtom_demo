@@ -322,6 +322,75 @@ app.get('/api/offers', async (req, res) => {
 });
 
 /**
+ * ---------------------------------------------------------------------
+ * POST /api/offers/feedback
+ *
+ * Logs a customer's response to an offer (Interested / Not Interested /
+ * Need More Information / Maybe Later). Called by offerslog.html after
+ * a feedback link is clicked in the offer modal.
+ *
+ * STUB — this currently just logs to the server console and returns
+ * success. It does NOT yet call a real Salesforce endpoint, because we
+ * don't have a confirmed engagement-logging API/schema for this. Once
+ * you have it, this is the one place to wire it in. Given the OAuth
+ * setup already in this file, the real call would likely look like:
+ *
+ *   const token = await getValidAccessToken();
+ *   const resp = await fetch(`${PERSONALIZATION_BASE_URL}/<real-endpoint-path>`, {
+ *     method: 'POST',
+ *     headers: {
+ *       'Authorization': `Bearer ${token}`,
+ *       'Content-Type': 'application/json'
+ *     },
+ *     body: JSON.stringify({
+ *       individualId,
+ *       dataspace,
+ *       personalizationContentId: contentId,   // ties back to the exact treatment shown
+ *       offerId,                                // ssot__Id__c
+ *       response,                               // interested | not_interested | need_more_info | maybe_later
+ *       channel
+ *     })
+ *   });
+ *
+ * (Path/payload shape above is illustrative only — confirm against your
+ * org's actual engagement/event API before relying on it.)
+ * ---------------------------------------------------------------------
+ */
+const VALID_FEEDBACK_RESPONSES = ['interested', 'not_interested', 'need_more_info', 'maybe_later'];
+
+app.post('/api/offers/feedback', async (req, res) => {
+  try {
+    const { individualId, dataspace, offerId, contentId, response, channel, offerName } = req.body;
+
+    if (!response || !VALID_FEEDBACK_RESPONSES.includes(response)) {
+      return res.status(400).json({ success: false, error: `response must be one of: ${VALID_FEEDBACK_RESPONSES.join(', ')}` });
+    }
+    if (!offerId && !contentId) {
+      return res.status(400).json({ success: false, error: 'offerId or contentId is required' });
+    }
+
+    const feedbackRecord = {
+      timestamp: new Date().toISOString(),
+      individualId: individualId || null,
+      dataspace: dataspace || DEFAULT_DATASPACE,
+      offerId: offerId || null,
+      contentId: contentId || null,
+      offerName: offerName || null,
+      response,
+      channel: channel || 'unknown'
+    };
+
+    // TODO: replace this console.log with the real Salesforce call described above.
+    console.log('[offer feedback - NOT YET SENT TO SALESFORCE]', feedbackRecord);
+
+    res.json({ success: true, logged: feedbackRecord });
+  } catch (error) {
+    console.error('POST /api/offers/feedback error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
  * Config for the Interactions Web SDK demo page (no secrets — CDN URL is public per connector).
  * @see https://developer.salesforce.com/docs/marketing/einstein-personalization/guide/integrate-salesforce-interactions-sdk.html
  */
@@ -399,6 +468,10 @@ app.get('/mortgages', (req, res) => {
 
 app.get('/console', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'console.html'));
+});
+
+app.get('/offerslog', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'offerslog.html'));
 });
 
 app.get('/', (req, res) => {
