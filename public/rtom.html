@@ -1,0 +1,1007 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RTOM – Salesforce Personalization Demo</title>
+<style>
+  :root {
+    --sf-blue: #0176d3;
+    --sf-blue-dark: #0a2240;
+    --sf-green: #2e844a;
+    --sf-red: #c23934;
+    --sf-yellow: #f9c23c;
+    --bg: #f3f3f3;
+    --card: #fff;
+    --border: #dddbda;
+    --text: #3e3e3c;
+    --text-light: #706e6b;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .header { background: var(--sf-blue-dark); color: #fff; padding: 1rem 2rem; display: flex; align-items: center; gap: 1.5rem; }
+  .header h1 { margin: 0; font-size: 1.2rem; font-weight: 700; }
+  .header .subtitle { margin: 0; font-size: 0.85rem; opacity: 0.8; }
+  .header-spacer { flex: 1; }
+  .nav-link { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 0.875rem; }
+  .nav-link:hover { color: #fff; }
+
+  .tabs { background: var(--sf-blue-dark); display: flex; padding: 0 2rem; border-top: 1px solid rgba(255,255,255,0.1); }
+  .tab-btn { color: rgba(255,255,255,0.65); background: none; border: none; border-bottom: 3px solid transparent; padding: 0.75rem 1.25rem; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .tab-btn:hover { color: rgba(255,255,255,0.9); }
+  .tab-btn.active { color: #fff; border-bottom-color: var(--sf-yellow); }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 2rem; }
+  .wide { max-width: 1100px; }
+
+  .card { background: var(--card); border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.06); padding: 1.5rem; margin-bottom: 1.5rem; }
+  .card h2 { margin: 0 0 0.25rem; font-size: 1rem; color: var(--sf-blue); }
+  .card .card-desc { margin: 0 0 1.25rem; font-size: 0.8rem; color: var(--text-light); }
+
+  label { display: block; margin-bottom: 0.2rem; font-size: 0.8rem; font-weight: 600; color: var(--text-light); }
+  input, select, textarea {
+    width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--border);
+    border-radius: 4px; font-size: 0.875rem; margin-bottom: 0.85rem;
+    font-family: inherit; color: var(--text);
+  }
+  textarea { resize: vertical; font-family: 'Monaco','Consolas',monospace; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--sf-blue); box-shadow: 0 0 0 2px rgba(1,118,211,0.15); }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+
+  .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.1rem; border-radius: 4px; font-size: 0.875rem; font-weight: 600; cursor: pointer; border: none; transition: background 0.15s; }
+  .btn-primary { background: var(--sf-blue); color: #fff; }
+  .btn-primary:hover { background: #014a8f; }
+  .btn-secondary { background: #fff; color: var(--sf-blue); border: 1px solid var(--sf-blue); }
+  .btn-secondary:hover { background: #f0f6ff; }
+  .btn-green { background: var(--sf-green); color: #fff; }
+  .btn-green:hover { background: #1e6b34; }
+  .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .response-box {
+    background: #f9f9f9; border: 1px solid var(--border); border-radius: 4px;
+    padding: 1rem; font-family: 'Monaco','Consolas',monospace; font-size: 0.72rem;
+    white-space: pre-wrap; word-break: break-all; max-height: 360px; overflow: auto;
+  }
+  .response-box.success { border-color: var(--sf-green); background: #f3f9f4; }
+  .response-box.error { border-color: var(--sf-red); background: #fef3f2; }
+
+  .status-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+  .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+  .badge-success { background: #d4edda; color: #155724; }
+  .badge-error { background: #f8d7da; color: #721c24; }
+  .badge-info { background: #cce5ff; color: #004085; }
+  .badge-warn { background: #fff3cd; color: #856404; }
+
+  /* ── Decision Explorer ── */
+  .decision-result { margin-top: 1rem; }
+  .offers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; margin-top: 1rem; }
+  .offer-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
+  .offer-card-img { height: 130px; background: #eee; overflow: hidden; }
+  .offer-card-img img { width: 100%; height: 100%; object-fit: cover; }
+  .offer-card-img .no-img { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 2rem; color: #aaa; }
+  .offer-card-body { padding: 0.85rem; flex: 1; display: flex; flex-direction: column; gap: 0.35rem; }
+  .offer-card-name { font-weight: 700; font-size: 0.875rem; }
+  .offer-card-body-text { font-size: 0.78rem; color: var(--text-light); flex: 1; }
+  .offer-card-cta { margin-top: 0.5rem; }
+  .diag-section { margin-top: 0.75rem; }
+  .diag-toggle { background: none; border: none; color: var(--sf-blue); font-size: 0.78rem; cursor: pointer; padding: 0; text-decoration: underline; }
+  .diag-content { margin-top: 0.5rem; display: none; }
+  .diag-content.open { display: block; }
+
+  /* ── Simulation ── */
+  .sim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem; }
+  .sim-persona-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .sim-persona-header { background: var(--sf-blue); color: #fff; padding: 0.75rem 1rem; font-weight: 700; font-size: 0.875rem; }
+  .sim-persona-body { padding: 1rem; }
+  .sim-offer { background: #f6f8fa; border: 1px solid var(--border); border-radius: 6px; padding: 0.65rem 0.85rem; margin-bottom: 0.5rem; }
+  .sim-offer-name { font-weight: 700; font-size: 0.8rem; }
+  .sim-offer-body { font-size: 0.75rem; color: var(--text-light); margin-top: 0.2rem; }
+  .sim-diag-mini { margin-top: 0.75rem; font-size: 0.72rem; font-family: monospace; background: #f0f0f0; border-radius: 4px; padding: 0.5rem; max-height: 200px; overflow: auto; }
+
+  /* ── Event Trigger ── */
+  .event-presets { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+  .preset-btn { background: #eef2f7; border: 1px solid #c8d5e8; color: var(--sf-blue); border-radius: 20px; padding: 0.3rem 0.85rem; font-size: 0.775rem; font-weight: 600; cursor: pointer; }
+  .preset-btn:hover { background: #d9e6f7; }
+  .ingest-log { margin-top: 1rem; }
+  .log-entry { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.78rem; }
+  .log-ts { color: var(--text-light); white-space: nowrap; font-family: monospace; }
+  .log-event { font-weight: 600; }
+  .log-status { margin-left: auto; }
+  .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid #ccc; border-top-color: var(--sf-blue); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .note { background: #f0f6ff; border-left: 3px solid var(--sf-blue); border-radius: 0 4px 4px 0; padding: 0.75rem 1rem; font-size: 0.8rem; margin-bottom: 1.25rem; color: #004085; }
+  .meta-text { font-size: 0.75rem; color: var(--text-light); margin: 0.35rem 0 0; }
+  .empty-state { text-align: center; padding: 2rem; color: var(--text-light); font-size: 0.875rem; }
+
+  @media (max-width: 640px) {
+    .row, .row-3, .sim-grid { grid-template-columns: 1fr; }
+    .tabs { overflow-x: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div>
+    <h1>RTOM – Salesforce Personalization</h1>
+    <p class="subtitle">Real-Time Offer Management · Data Cloud Decisioning API</p>
+  </div>
+  <div class="header-spacer"></div>
+  <a href="/simulator" class="nav-link" style="color:var(--sf-yellow);font-weight:700;">Simulator</a>
+  <a href="/" class="nav-link">← RBC Home</a>
+  <a href="/console" class="nav-link">Console</a>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="tab-btn active" data-tab="decisions" role="tab">Decision Explorer</button>
+  <button class="tab-btn" data-tab="simulation" role="tab">Simulation</button>
+  <button class="tab-btn" data-tab="events" role="tab">Event Trigger</button>
+</nav>
+
+<!-- ─── TAB: Decision Explorer ─────────────────────────────────────────────── -->
+<div id="tab-decisions" class="tab-panel active">
+<div class="container">
+  <div class="card">
+    <h2>Decision Explorer</h2>
+    <p class="card-desc">Select a personalization point and channel, enter an MDM Individual ID, and retrieve the live decision from Data Cloud.</p>
+
+    <form id="decision-form">
+      <div class="row">
+        <div>
+          <label for="d-individual-id">Individual ID (MDM)</label>
+          <select id="d-individual-id" onchange="updateRequestPreview()" required>
+            <option value="">— Select Individual —</option>
+            <option value="MDM-RBC-0000006194">Veronica Robles (MDM-RBC-0000006194) — Young Professional</option>
+            <option value="MDM-RBC-0000002186">Guillaume Bouchard (MDM-RBC-0000002186) — New Homeowner</option>
+            <option value="MDM-RBC-0000004975">Benjamin Trevino (MDM-RBC-0000004975) — Small Business Owner</option>
+            <option value="MDM-RBC-0000001463">Elizabeth Barrett (MDM-RBC-0000001463) — Retiree</option>
+            <option value="MDM-RBC-0000005392">Kevin Webb (MDM-RBC-0000005392) — Student</option>
+          </select>
+        </div>
+        <div>
+          <label for="d-dataspace">Dataspace</label>
+          <input type="text" id="d-dataspace" placeholder="default" oninput="updateRequestPreview()" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="d-point-name">Personalization Point</label>
+          <input type="text" id="d-point-name" placeholder="e.g. Eligable_Borealis_Ranking" oninput="updateRequestPreview()" />
+        </div>
+        <div>
+          <label for="d-anchor-type">Channel</label>
+          <select id="d-anchor-type" onchange="onChannelChange()">
+            <option value="">— Any —</option>
+            <option value="0eFHu000000I1mHMAS" data-name="Direct Mail">Direct Mail (DM)</option>
+            <option value="0eFHu000000I1mDMAS" data-name="Mortgage Specialist Outbound Calling">Mortgage Specialist Outbound Calling (MM)</option>
+            <option value="0eFHu000000I1mMMAS" data-name="Branch/Call Center Advisor Insight">Branch/Call Center Advisor Insight (DO)</option>
+            <option value="0eFHu000000I1nAMAS" data-name="Mobile Dashboard">Mobile Dashboard (MD)</option>
+            <option value="0eFHu000000I1mvMAC" data-name="Mobile Sales Modal">Mobile Sales Modal (MS)</option>
+            <option value="0eFHu000000I1mgMAC" data-name="Mobile">Mobile (MB)</option>
+            <option value="0eFHu000000I1mbMAC" data-name="Branch Sales Tool">Branch Sales Tool (CC)</option>
+            <option value="0eFHu000000I1mrMAC" data-name="Advice Center Dialer">Advice Center Dialer (RD)</option>
+            <option value="0eFHu000000I1mWMAS" data-name="Online Banking Financial Offers">Online Banking Financial Offers (IN)</option>
+            <option value="0eFHu000000I1mlMAC" data-name="Online Banking Banner">Online Banking Banner (IM)</option>
+            <option value="0eFHu000000I1m3MAC" data-name="Outbound Email">Outbound Email (EM)</option>
+            <option value="0eFHu000000I1mqMAC" data-name="IVR - In-Bound Calling">IVR - In-Bound Calling (IV)</option>
+            <option value="0eFHu000000I1m6MAC" data-name="Web">Web</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="d-offer-group">Category <span style="font-weight:400;font-size:0.72rem;">(→ {!Category} dynamic variable)</span></label>
+          <select id="d-offer-group" onchange="updateRequestPreview()">
+            <option value="">— Any —</option>
+            <option value="0ZGHu000000TJEkOAO">Cross Border</option>
+            <option value="0ZGHu000000TJEfOAO">Payments</option>
+            <option value="0ZGHu000000TJEaOAO">Banking</option>
+            <option value="0ZGHu000000TJEVOA4">Wealth</option>
+            <option value="0ZGHu000000TJEQOA4">Mortgage</option>
+          </select>
+        </div>
+        <div>
+          <label for="d-channel-name" style="color:#999;">Channel Name <span style="font-weight:400;font-size:0.72rem;">(→ {!channel}, auto-filled)</span></label>
+          <input type="text" id="d-channel-name" placeholder="Auto-filled from Channel" readonly style="background:#f5f5f5;color:#888;" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="d-request-url">Request URL (optional)</label>
+          <input type="text" id="d-request-url" placeholder="https://bank.example/offers" />
+        </div>
+        <div style="display:flex;align-items:flex-end;padding-bottom:0.85rem;">
+          <label style="display:flex;align-items:center;gap:0.5rem;margin:0;cursor:pointer;">
+            <input type="checkbox" id="d-diagnostics" style="width:auto;margin:0;" />
+            <span style="font-weight:600;font-size:0.8rem;">Enable Diagnostics</span>
+          </label>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary" id="d-submit-btn">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"/></svg>
+        Get Decision
+      </button>
+
+      <div style="margin-top:1.25rem;">
+        <div style="font-size:0.75rem;font-weight:600;color:var(--text-light);margin-bottom:0.35rem;">REQUEST PREVIEW</div>
+        <pre class="response-box" id="d-request-preview" style="max-height:180px;"></pre>
+      </div>
+    </form>
+  </div>
+
+  <div class="card decision-result" id="d-result" style="display:none;">
+    <div class="status-row">
+      <span id="d-status-badge"></span>
+      <span class="meta-text" id="d-meta"></span>
+    </div>
+
+    <div id="d-offers-container"></div>
+
+    <div class="diag-section" id="d-diag-section" style="display:none;">
+      <button class="diag-toggle" id="d-diag-toggle" onclick="toggleDiag('d')">Show diagnostics ▾</button>
+      <div class="diag-content response-box" id="d-diag-content"></div>
+    </div>
+
+    <div class="diag-section">
+      <button class="diag-toggle" id="d-raw-toggle" onclick="toggleRaw('d')">Show raw response ▾</button>
+      <div class="diag-content response-box" id="d-raw-content"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ─── TAB: Simulation ───────────────────────────────────────────────────── -->
+<div id="tab-simulation" class="tab-panel">
+<div class="container wide">
+
+  <div class="note">
+    This tab compares decisions for two MDM IDs side-by-side, with diagnostics enabled. It's designed to show how
+    <strong>Eligibility/Compliance rules</strong>, <strong>Budget Caps</strong>, and <strong>Frequency Caps</strong>
+    result in different offers for different individuals.
+  </div>
+
+  <div class="card">
+    <h2>Side-by-Side Simulation</h2>
+    <p class="card-desc">Calls the Decisioning API in parallel for two individual IDs. Diagnostics are always enabled so you can inspect cap and eligibility decisions.</p>
+    <form id="sim-form">
+      <div class="row">
+        <div>
+          <label for="s-mdm1">Individual ID 1</label>
+          <select id="s-mdm1" required>
+            <option value="">— Select Individual —</option>
+            <option value="MDM-RBC-0000006194">Veronica Robles — Young Professional</option>
+            <option value="MDM-RBC-0000002186">Guillaume Bouchard — New Homeowner</option>
+            <option value="MDM-RBC-0000004975">Benjamin Trevino — Small Business Owner</option>
+            <option value="MDM-RBC-0000001463">Elizabeth Barrett — Retiree</option>
+            <option value="MDM-RBC-0000005392">Kevin Webb — Student</option>
+          </select>
+        </div>
+        <div>
+          <label for="s-mdm2">Individual ID 2</label>
+          <select id="s-mdm2" required>
+            <option value="">— Select Individual —</option>
+            <option value="MDM-RBC-0000006194">Veronica Robles — Young Professional</option>
+            <option value="MDM-RBC-0000002186">Guillaume Bouchard — New Homeowner</option>
+            <option value="MDM-RBC-0000004975">Benjamin Trevino — Small Business Owner</option>
+            <option value="MDM-RBC-0000001463">Elizabeth Barrett — Retiree</option>
+            <option value="MDM-RBC-0000005392">Kevin Webb — Student</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="s-point">Personalization Point</label>
+          <input type="text" id="s-point" placeholder="e.g. Eligable_Borealis_Ranking" />
+        </div>
+        <div>
+          <label for="s-dataspace">Dataspace</label>
+          <input type="text" id="s-dataspace" placeholder="default" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="s-channel">Channel</label>
+          <select id="s-channel">
+            <option value="">— Any —</option>
+            <option value="0eFHu000000I1mHMAS" data-name="Direct Mail" data-code="DM">Direct Mail (DM)</option>
+            <option value="0eFHu000000I1mDMAS" data-name="Mortgage Specialist Outbound Calling" data-code="MM">Mortgage Specialist Outbound Calling (MM)</option>
+            <option value="0eFHu000000I1mMMAS" data-name="Branch/Call Center Advisor Insight" data-code="DO">Branch/Call Center Advisor Insight (DO)</option>
+            <option value="0eFHu000000I1nAMAS" data-name="Mobile Dashboard" data-code="MD">Mobile Dashboard (MD)</option>
+            <option value="0eFHu000000I1mvMAC" data-name="Mobile Sales Modal" data-code="MS">Mobile Sales Modal (MS)</option>
+            <option value="0eFHu000000I1mgMAC" data-name="Mobile" data-code="MB">Mobile (MB)</option>
+            <option value="0eFHu000000I1mbMAC" data-name="Branch Sales Tool" data-code="CC">Branch Sales Tool (CC)</option>
+            <option value="0eFHu000000I1mrMAC" data-name="Advice Center Dialer" data-code="RD">Advice Center Dialer (RD)</option>
+            <option value="0eFHu000000I1mWMAS" data-name="Online Banking Financial Offers" data-code="IN">Online Banking Financial Offers (IN)</option>
+            <option value="0eFHu000000I1mlMAC" data-name="Online Banking Banner" data-code="IM">Online Banking Banner (IM)</option>
+            <option value="0eFHu000000I1m3MAC" data-name="Outbound Email" data-code="EM">Outbound Email (EM)</option>
+            <option value="0eFHu000000I1mqMAC" data-name="IVR - In-Bound Calling" data-code="IV">IVR - In-Bound Calling (IV)</option>
+          </select>
+        </div>
+        <div>
+          <label for="s-category">Category <span style="font-weight:400;">(→ {!Category})</span></label>
+          <select id="s-category">
+            <option value="">— Any —</option>
+            <option value="0ZGHu000000TJEkOAO">Cross Border</option>
+            <option value="0ZGHu000000TJEfOAO">Payments</option>
+            <option value="0ZGHu000000TJEaOAO">Banking</option>
+            <option value="0ZGHu000000TJEVOA4">Wealth</option>
+            <option value="0ZGHu000000TJEQOA4">Mortgage</option>
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary" id="s-submit-btn">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a7 7 0 100 14A7 7 0 009 2zm-1 11V7l6 3-6 3z"/></svg>
+        Run Simulation
+      </button>
+    </form>
+  </div>
+
+  <div id="sim-result" style="display:none;">
+    <div class="sim-grid">
+      <div id="sim-card-1"></div>
+      <div id="sim-card-2"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ─── TAB: Event Trigger ────────────────────────────────────────────────── -->
+<div id="tab-events" class="tab-panel">
+<div class="container">
+
+  <div class="note">
+    Events are ingested via the <strong>Data Cloud Streaming Ingestion API</strong> and appear in real-time in Data Cloud.
+    Use the presets below or craft a custom payload. You can then return to the <em>Decision Explorer</em> tab to see how the ingested events affect offers.
+  </div>
+
+  <div class="card">
+    <h2>Event Configuration</h2>
+    <p class="card-desc">Target object and individual context for the event.</p>
+    <div class="row">
+      <div>
+        <label for="e-object">Target Object (API name)</label>
+        <select id="e-object">
+          <option value="">Loading…</option>
+        </select>
+      </div>
+      <div>
+        <label for="e-individual-id">Individual ID (MDM)</label>
+        <input type="text" id="e-individual-id" placeholder="e.g. MDM-RBC-0000006194" />
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Quick Presets</h2>
+    <p class="card-desc">Click a preset to auto-fill the payload editor. Presets inject the Individual ID above.</p>
+    <div class="event-presets" id="presets-container">
+      <button class="preset-btn" data-preset="page_view_offers">Page View — Offers</button>
+      <button class="preset-btn" data-preset="page_view_mortgages">Page View — Mortgages</button>
+      <button class="preset-btn" data-preset="offer_click">Offer Click</button>
+      <button class="preset-btn" data-preset="offer_dismiss">Offer Dismiss</button>
+      <button class="preset-btn" data-preset="purchase">Purchase Event</button>
+      <button class="preset-btn" data-preset="segment_update">Segment Update</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Payload Editor</h2>
+    <p class="card-desc">The <code>data</code> array sent to the Ingestion API. Each object is one record. Edit freely.</p>
+    <textarea id="e-payload" rows="14" placeholder='[
+  {
+    "individualId": "MDM-RBC-0000006194",
+    "eventType": "PageView",
+    "pageUrl": "https://bank.example/offers",
+    "eventDateTime": "2026-07-18T12:00:00Z"
+  }
+]'></textarea>
+    <div style="display:flex;gap:0.75rem;align-items:center;">
+      <button class="btn btn-green" id="e-send-btn">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/></svg>
+        Ingest Event(s)
+      </button>
+      <button class="btn btn-secondary" id="e-clear-log-btn">Clear Log</button>
+      <span class="meta-text" id="e-status-text"></span>
+    </div>
+  </div>
+
+  <div class="card ingest-log">
+    <h2>Ingestion Log</h2>
+    <div id="e-log-entries">
+      <div class="empty-state">No events sent yet. Use the presets or editor above.</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// ── Persona map ──────────────────────────────────────────────────────────────
+const PERSONA_NAMES = {
+  'MDM-RBC-0000006194': 'Veronica Robles — Young Professional',
+  'MDM-RBC-0000002186': 'Guillaume Bouchard — New Homeowner',
+  'MDM-RBC-0000004975': 'Benjamin Trevino — Small Business Owner',
+  'MDM-RBC-0000001463': 'Elizabeth Barrett — Retiree',
+  'MDM-RBC-0000005392': 'Kevin Webb — Student',
+};
+const MDM_TO_UNIFIED = {
+  'MDM-RBC-0000006194': '038ea41f2fe02902d874764a2d258da2',
+  'MDM-RBC-0000002186': 'e0a32d05fd40da491ab6ef5eca3d68e3',
+  'MDM-RBC-0000004975': '38a2c923f8b8bb1c0eadc92263779627',
+  'MDM-RBC-0000001463': 'a433e720860d53f81126250a444969c7',
+  'MDM-RBC-0000005392': '8485a4fd8c90d30f7a999a82d461dd05',
+};
+
+// ── Config ───────────────────────────────────────────────────────────────────
+let appConfig = {
+  defaultDataspace: 'default',
+  personalizationPoints: ['Eligable_Borealis_Ranking'],
+  simulationMdmIds: ['MDM-RBC-0000006194', 'MDM-RBC-0000001463'],
+  ingestConfigured: false,
+  ingestSourceApiName: '',
+  eventObjects: []
+};
+
+async function loadConfig() {
+  try {
+    const r = await fetch('/api/rtom/config');
+    const d = await r.json();
+    Object.assign(appConfig, d);
+  } catch (e) { console.warn('Config load failed:', e); }
+  applyConfig();
+}
+
+function applyConfig() {
+  const dc = appConfig.defaultDataspace;
+  document.getElementById('d-dataspace').value = dc;
+  document.getElementById('s-dataspace').value = dc;
+
+  // personalization point inputs — pre-fill with first configured point
+  const defaultPoint = appConfig.personalizationPoints[0] || '';
+  document.getElementById('d-point-name').value = defaultPoint;
+  document.getElementById('s-point').value = defaultPoint;
+
+  // sim IDs — pre-select first two personas
+  document.getElementById('s-mdm1').value = appConfig.simulationMdmIds[0] || 'MDM-RBC-0000006194';
+  document.getElementById('s-mdm2').value = appConfig.simulationMdmIds[1] || 'MDM-RBC-0000001463';
+
+  // event objects
+  const eObj = document.getElementById('e-object');
+  eObj.innerHTML = '';
+  const objs = appConfig.eventObjects.length ? appConfig.eventObjects : ['RTEvent'];
+  objs.forEach(o => {
+    const opt = document.createElement('option');
+    opt.value = o; opt.textContent = o;
+    eObj.appendChild(opt);
+  });
+
+  updateRequestPreview();
+  if (!appConfig.ingestConfigured) {
+    document.getElementById('e-status-text').textContent = '⚠ Ingestion not configured (DC_INGEST_BASE_URL / DC_INGEST_SOURCE_API_NAME missing)';
+  }
+}
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function isoNow() { return new Date().toISOString(); }
+function ts() { return new Date().toLocaleTimeString(); }
+
+function toggleDiag(prefix) {
+  const el = document.getElementById(prefix + '-diag-content');
+  const btn = document.getElementById(prefix + '-diag-toggle');
+  el.classList.toggle('open');
+  btn.textContent = el.classList.contains('open') ? 'Hide diagnostics ▴' : 'Show diagnostics ▾';
+}
+function toggleRaw(prefix) {
+  const el = document.getElementById(prefix + '-raw-content');
+  const btn = document.getElementById(prefix + '-raw-toggle');
+  el.classList.toggle('open');
+  btn.textContent = el.classList.contains('open') ? 'Hide raw response ▴' : 'Show raw response ▾';
+}
+window.toggleDiag = toggleDiag;
+window.toggleRaw = toggleRaw;
+
+function renderOfferCards(offers) {
+  if (!offers.length) return '<div class="empty-state">No offers returned for this context.</div>';
+  return '<div class="offers-grid">' + offers.map(o => `
+    <div class="offer-card">
+      <div class="offer-card-img">${o.imageUrl
+        ? `<img src="${o.imageUrl}" alt="${o.heading || o.name}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'no-img\\'>🏦</div>'">`
+        : `<div class="no-img">🏦</div>`}</div>
+      <div class="offer-card-body">
+        <div class="offer-card-name">${o.heading || o.name}</div>
+        <div class="offer-card-body-text">${o.body || ''}</div>
+        <div class="offer-card-cta">
+          <a href="${o.ctaUrl || '#'}" target="_blank" rel="noopener" class="btn btn-secondary" style="font-size:0.75rem;padding:0.35rem 0.8rem;">${o.ctaText || 'Learn More'}</a>
+        </div>
+      </div>
+    </div>`).join('') + '</div>';
+}
+
+// ── Decision Explorer ─────────────────────────────────────────────────────────
+document.getElementById('decision-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('d-submit-btn');
+  const resultCard = document.getElementById('d-result');
+  const badgeEl = document.getElementById('d-status-badge');
+  const metaEl = document.getElementById('d-meta');
+  const offersEl = document.getElementById('d-offers-container');
+  const diagSection = document.getElementById('d-diag-section');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Fetching…';
+  resultCard.style.display = 'block';
+  badgeEl.innerHTML = '<span class="badge badge-info">Loading</span>';
+  offersEl.innerHTML = '';
+  metaEl.textContent = '';
+
+  const body = buildDecisionRequestBody();
+  const individualId = body.context.individualId;
+  const enableDiagnostics = document.getElementById('d-diagnostics').checked;
+
+  try {
+    const res = await fetch('/api/personalization/decisions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        context: {
+          individualId: body.context.individualId,
+          ...(body.context.unifiedIndividualId && { unifiedIndividualId: body.context.unifiedIndividualId }),
+          dataspace: body.context.dataspace,
+          channelId: document.getElementById('d-anchor-type').value || undefined,
+          categoryId: document.getElementById('d-offer-group').value || undefined
+        },
+        personalizationPoints: body.personalizationPoints,
+        ...(enableDiagnostics && { executionFlags: ['EnableDiagnostics'] })
+      })
+    });
+    const data = await res.json();
+
+    if (!data.success) throw new Error(data.error || 'Request failed');
+
+    const rawItems = data.personalizations?.[0]?.data || [];
+    const offers = rawItems.map(normalizeOffer).filter(Boolean);
+    const pointName = body.personalizationPoints?.[0]?.name || '';
+    const channelLabel = document.getElementById('d-anchor-type').options[document.getElementById('d-anchor-type').selectedIndex]?.text || '';
+
+    badgeEl.innerHTML = `<span class="badge badge-success">✓ ${offers.length} offer${offers.length !== 1 ? 's' : ''}</span>`;
+    metaEl.textContent = `requestId: ${data.requestId || '—'} · ${pointName}${channelLabel ? ' · ' + channelLabel : ''}`;
+    offersEl.innerHTML = renderOfferCards(offers);
+
+    if (data.diagnostics) {
+      diagSection.style.display = '';
+      document.getElementById('d-diag-content').textContent = JSON.stringify(data.diagnostics, null, 2);
+    } else {
+      diagSection.style.display = 'none';
+    }
+    document.getElementById('d-raw-content').textContent = JSON.stringify(data, null, 2);
+
+  } catch (err) {
+    badgeEl.innerHTML = '<span class="badge badge-error">Error</span>';
+    metaEl.textContent = err.message;
+    offersEl.innerHTML = '';
+    document.getElementById('d-raw-content').textContent = err.message;
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"/></svg> Get Decision`;
+});
+
+function normalizeOffer(item) {
+  if (!item) return null;
+  // Treatment fields may be nested under ssot__OfferTreatment__dlm or Offer_Treatment
+  const treatment = item.ssot__OfferTreatment__dlm || item.Offer_Treatment || {};
+  const i = { ...item, ...treatment };
+  return {
+    id: i.ssot__Id__c || i.personalizationContentId || null,
+    name: i.ssot__Name__c || '',
+    heading: i.ssot__OfferHeadingText__c || i.ssot__Name__c || '',
+    body: i.ssot__OfferBodyText__c || '',
+    imageUrl: i.ssot__ImageUrl__c || '',
+    ctaText: i.ssot__CallToActionText__c || 'Learn More',
+    ctaUrl: i.ssot__CallToActionUrl__c || '#',
+  };
+}
+
+// ── Simulation ────────────────────────────────────────────────────────────────
+const CHANNEL_ELIGIBLE_MAP = {
+  DM:'DM_Eligible__c', MM:'MM_Eligible__c', DO:'DO_Eligible__c',
+  MD:'MD_Eligible__c', MS:'MS_Eligible__c', MB:'MB_Eligible__c',
+  CC:'CC_Eligible__c', RD:'RD_Eligible__c', IN:'IN_Eligible__c',
+  IM:'IM_Eligible__c', EM:'EM_Eligible__c', IV:'IV_Eligible__c'
+};
+
+function extractSimBorealis(profileData) {
+  const offers = [];
+  const links = profileData?.UnifiedLinkssotIndividualIndv__dlm || [];
+  for (const link of links) {
+    for (const ind of (link.ssot__Individual__dlm || [])) {
+      for (const o of (ind.Borealis_Model_Output_dlm_copy__dlm || [])) {
+        offers.push(o);
+      }
+    }
+  }
+  return offers.sort((a,b) => (a.Recommended_Action_Rank__c??99)-(b.Recommended_Action_Rank__c??99));
+}
+
+document.getElementById('sim-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('s-submit-btn');
+  const resultEl = document.getElementById('sim-result');
+
+  const mdmId1 = document.getElementById('s-mdm1').value.trim();
+  const mdmId2 = document.getElementById('s-mdm2').value.trim();
+  const chanSel = document.getElementById('s-channel');
+  const chanOpt = chanSel.options[chanSel.selectedIndex];
+  const channelSfid = chanSel.value;
+  const channelName = chanOpt?.dataset?.name || '';
+  const channelCode = chanOpt?.dataset?.code || '';
+  const category = document.getElementById('s-category').value.trim();
+  const dataspace = document.getElementById('s-dataspace').value.trim() || appConfig.defaultDataspace;
+  const pointName = document.getElementById('s-point').value;
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Simulating…';
+  resultEl.style.display = 'none';
+
+  try {
+    const [simRes, profile1Res, profile2Res] = await Promise.all([
+      fetch('/api/rtom/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mdmId1, mdmId2, dataspace,
+          personalizationPointName: pointName,
+          ...(channelSfid && { channelId: channelSfid }),
+          ...(category && { categoryId: category })
+        })
+      }).then(r => r.json()),
+      fetch(`/api/profile?individualId=${encodeURIComponent(MDM_TO_UNIFIED[mdmId1] || mdmId1)}&graph=RTDG4`).then(r => r.json()),
+      fetch(`/api/profile?individualId=${encodeURIComponent(MDM_TO_UNIFIED[mdmId2] || mdmId2)}&graph=RTDG4`).then(r => r.json())
+    ]);
+
+    if (!simRes.success) throw new Error(simRes.error);
+
+    const borealis1 = extractSimBorealis(profile1Res.data || {});
+    const borealis2 = extractSimBorealis(profile2Res.data || {});
+
+    resultEl.style.display = '';
+    const chanLabel = chanSel.options[chanSel.selectedIndex]?.text || '';
+    document.getElementById('sim-card-1').innerHTML = buildSimCard(simRes.sim1, borealis1, channelCode, channelName, chanLabel, profile1Res.data || {});
+    document.getElementById('sim-card-2').innerHTML = buildSimCard(simRes.sim2, borealis2, channelCode, channelName, chanLabel, profile2Res.data || {});
+  } catch (err) {
+    resultEl.style.display = '';
+    const msg = `<div class="sim-persona-card"><div class="sim-persona-header" style="background:var(--sf-red)">Error</div><div class="sim-persona-body"><p>${err.message}</p></div></div>`;
+    document.getElementById('sim-card-1').innerHTML = msg;
+    document.getElementById('sim-card-2').innerHTML = '';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a7 7 0 100 14A7 7 0 009 2zm-1 11V7l6 3-6 3z"/></svg> Run Simulation`;
+});
+
+function extractProfileSummary(profileData) {
+  if (!profileData) return {};
+  // Email
+  const emailNode = profileData.UnifiedssotContactPointEmailIndv__dlm?.[0];
+  const email = emailNode?.ssot__EmailAddress__c || '—';
+  // Phone
+  const phoneNode = profileData.UnifiedssotContactPointPhoneIndv__dlm?.[0];
+  const phone = phoneNode?.ssot__TelephoneNumber__c || phoneNode?.ssot__FormattedE164PhoneNumber__c || '—';
+  // Boosted rankings
+  const boosted = (profileData.Boosted_Offer_Ranking__cio || [])
+    .sort((a,b) => (a.boosted_rank__c??99)-(b.boosted_rank__c??99));
+  const boosted2 = (profileData.BoostedOfferRanking2__cio || [])
+    .sort((a,b) => (a.boosted_rank__c??99)-(b.boosted_rank__c??99));
+  const borealisRanking = (profileData.BorealisOfferRanking12__cio || [])
+    .sort((a,b) => (a.offer_rank__c??99)-(b.offer_rank__c??99));
+  return { email, phone, boosted, boosted2, borealisRanking };
+}
+
+function buildSimCard(sim, borealisOffers, channelCode, channelName, channelLabel, profileData) {
+  const decisionOfferIds = new Set(sim.offers.map(o => o.id).filter(Boolean));
+  const eligField = CHANNEL_ELIGIBLE_MAP[channelCode];
+  const profile = extractProfileSummary(profileData);
+
+  const offerHtml = sim.offers.length
+    ? sim.offers.map(o => `
+        <div class="sim-offer">
+          <div class="sim-offer-name">${o.heading || o.name}</div>
+          ${o.body ? `<div class="sim-offer-body">${o.body}</div>` : ''}
+        </div>`).join('')
+    : '<div style="padding:0.75rem;color:var(--text-light);font-size:0.8rem;">No offers returned</div>';
+
+  // ── RTDG Panel ──
+  const rtdgHtml = `
+    <details style="margin-top:0.85rem;" open>
+      <summary style="font-size:0.75rem;cursor:pointer;color:var(--sf-blue);font-weight:600;padding:0.4rem 0;">
+        📊 Data Graph — RTDG4 ▾
+      </summary>
+
+      <!-- Contact Info -->
+      <div style="background:#f8f9fb;border:1px solid var(--border);border-radius:6px;padding:0.65rem 0.85rem;margin-top:0.5rem;font-size:0.75rem;">
+        <div style="font-weight:700;color:var(--text-light);font-size:0.68rem;text-transform:uppercase;margin-bottom:0.4rem;">Contact</div>
+        <div>📧 ${profile.email}</div>
+        <div>📞 ${profile.phone}</div>
+      </div>
+
+      <!-- Borealis Model Output -->
+      <div style="margin-top:0.65rem;">
+        <div style="font-weight:700;font-size:0.7rem;color:var(--text-light);text-transform:uppercase;margin-bottom:0.35rem;">🧠 Borealis Model Output</div>
+        <table style="width:100%;border-collapse:collapse;font-size:0.71rem;">
+          <thead>
+            <tr style="background:#f0f4f8;">
+              <th style="padding:0.3rem 0.5rem;text-align:left;border-bottom:2px solid var(--border);white-space:nowrap;">Rank</th>
+              <th style="padding:0.3rem 0.5rem;text-align:left;border-bottom:2px solid var(--border);">Action</th>
+              <th style="padding:0.3rem 0.5rem;text-align:left;border-bottom:2px solid var(--border);">Rec. Channels</th>
+              ${channelCode ? `<th style="padding:0.3rem 0.5rem;text-align:left;border-bottom:2px solid var(--border);">${channelCode} Elig.</th>` : ''}
+              <th style="padding:0.3rem 0.5rem;text-align:left;border-bottom:2px solid var(--border);">Exp. Value</th>
+              <th style="padding:0.3rem 0.5rem;text-align:left;border-bottom:2px solid var(--border);">In Decision?</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${borealisOffers.map(o => {
+              const inDec = decisionOfferIds.has(o.SF_OFFER_ID__c);
+              const elig = eligField ? o[eligField] : null;
+              const isRec = o.Recommended_Action__c === 1;
+              return `<tr style="${inDec ? 'background:#dff0ff;font-weight:600;' : ''} ${isRec ? 'border-left:3px solid var(--sf-green);' : ''}">
+                <td style="padding:0.3rem 0.5rem;font-weight:700;">${o.Recommended_Action_Rank__c ?? '—'}</td>
+                <td style="padding:0.3rem 0.5rem;">${o.Action_Code__c || '—'}</td>
+                <td style="padding:0.3rem 0.5rem;font-size:0.65rem;color:var(--text-light);">${o.Recommended_Channels__c || '—'}</td>
+                ${channelCode ? `<td style="padding:0.3rem 0.5rem;">${elig === 1 ? '✅' : '❌'}</td>` : ''}
+                <td style="padding:0.3rem 0.5rem;">$${o.Expected_Value_Uplift__c ?? '—'}</td>
+                <td style="padding:0.3rem 0.5rem;">${inDec ? '<span style="color:var(--sf-green);font-weight:700;">✓</span>' : '—'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- CIO Rankings -->
+      ${profile.boosted.length ? `
+      <div style="margin-top:0.65rem;display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+        <div>
+          <div style="font-weight:700;font-size:0.68rem;color:var(--text-light);text-transform:uppercase;margin-bottom:0.3rem;">Boosted Ranking</div>
+          ${profile.boosted.slice(0,5).map(r => `
+            <div style="display:flex;align-items:center;gap:0.4rem;padding:0.2rem 0;font-size:0.7rem;${decisionOfferIds.has(r.offer_id__c)?'font-weight:700;color:var(--sf-blue)':''}">
+              <span style="background:${r.boosted_rank__c===1?'#c9a227':r.boosted_rank__c===2?'#aaa':'#ddd'};color:${r.boosted_rank__c<=2?'#fff':'#555'};border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">${r.boosted_rank__c}</span>
+              <span style="font-family:monospace;font-size:0.65rem;">${r.offer_id__c?.slice(-6) || '—'}</span>
+              ${decisionOfferIds.has(r.offer_id__c) ? '<span style="color:var(--sf-green);">✓</span>' : ''}
+            </div>`).join('')}
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:0.68rem;color:var(--text-light);text-transform:uppercase;margin-bottom:0.3rem;">Borealis Ranking</div>
+          ${profile.borealisRanking.slice(0,5).map(r => `
+            <div style="display:flex;align-items:center;gap:0.4rem;padding:0.2rem 0;font-size:0.7rem;${decisionOfferIds.has(r.offer_id__c)?'font-weight:700;color:var(--sf-blue)':''}">
+              <span style="background:#e0e8f5;color:#444;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">${r.offer_rank__c ?? '?'}</span>
+              <span style="font-family:monospace;font-size:0.65rem;">${r.offer_id__c?.slice(-6) || '—'}</span>
+              ${decisionOfferIds.has(r.offer_id__c) ? '<span style="color:var(--sf-green);">✓</span>' : ''}
+            </div>`).join('')}
+        </div>
+      </div>` : ''}
+    </details>`;
+
+  const diagHtml = sim.diagnostics
+    ? `<details style="margin-top:0.5rem;"><summary style="font-size:0.75rem;cursor:pointer;color:var(--sf-blue);">Diagnostics ▾</summary><div class="sim-diag-mini">${JSON.stringify(sim.diagnostics, null, 2)}</div></details>` : '';
+
+  return `
+    <div class="sim-persona-card">
+      <div class="sim-persona-header">👤 ${PERSONA_NAMES[sim.mdmId] || sim.mdmId}</div>
+      <div class="sim-persona-body">
+        <div style="font-size:0.72rem;color:var(--text-light);margin-bottom:0.6rem;">
+          requestId: ${sim.requestId || '—'} · ${sim.offers.length} offer(s)${channelLabel ? ' · ' + channelLabel : ''}
+        </div>
+
+        <!-- Proof strip: top Borealis rank vs top decision offer -->
+        ${borealisOffers.length && sim.offers.length ? (() => {
+          const topBorealis = borealisOffers[0];
+          const topDecision = sim.offers[0];
+          const match = topDecision.id === topBorealis.SF_OFFER_ID__c;
+          return `<div style="background:${match?'#e8f5e9':'#fff8e1'};border:1px solid ${match?'#a5d6a7':'#ffe082'};border-radius:6px;padding:0.6rem 0.85rem;margin-bottom:0.75rem;font-size:0.78rem;">
+            <div style="font-weight:700;font-size:0.72rem;margin-bottom:0.3rem;">${match?'✅ Borealis #1 = Decision #1':'⚠️ Borealis #1 ≠ Decision #1'}</div>
+            <div>🧠 Borealis top action: <strong>${topBorealis.Action_Code__c}</strong> (rank ${topBorealis.Recommended_Action_Rank__c})</div>
+            <div>⚡ Decision top offer: <strong>${topDecision.heading || topDecision.name}</strong></div>
+          </div>`;
+        })() : ''}
+
+        <!-- Decision Offers -->
+        <div style="font-weight:700;font-size:0.7rem;color:var(--text-light);text-transform:uppercase;margin-bottom:0.35rem;">⚡ Decision Result</div>
+        ${offerHtml}
+
+        ${rtdgHtml}
+        ${diagHtml}
+      </div>
+    </div>`;
+}
+
+// ── Event Presets ─────────────────────────────────────────────────────────────
+const PRESETS = {
+  page_view_offers: () => ([{
+    individualId: document.getElementById('e-individual-id').value.trim() || 'MDM-RBC-0000006194',
+    eventType: 'PageView',
+    pageUrl: 'https://bank.example/offers',
+    pageCategory: 'Offers',
+    eventDateTime: isoNow()
+  }]),
+  page_view_mortgages: () => ([{
+    individualId: document.getElementById('e-individual-id').value.trim() || 'MDM-RBC-0000006194',
+    eventType: 'PageView',
+    pageUrl: 'https://bank.example/mortgages',
+    pageCategory: 'Mortgages',
+    eventDateTime: isoNow()
+  }]),
+  offer_click: () => ([{
+    individualId: document.getElementById('e-individual-id').value.trim() || 'MDM-RBC-0000006194',
+    eventType: 'OfferClick',
+    offerId: 'offer-001',
+    offerName: 'Avion Visa Infinite',
+    channel: 'Web',
+    eventDateTime: isoNow()
+  }]),
+  offer_dismiss: () => ([{
+    individualId: document.getElementById('e-individual-id').value.trim() || 'MDM-RBC-0000006194',
+    eventType: 'OfferDismiss',
+    offerId: 'offer-001',
+    offerName: 'Avion Visa Infinite',
+    channel: 'Web',
+    eventDateTime: isoNow()
+  }]),
+  purchase: () => ([{
+    individualId: document.getElementById('e-individual-id').value.trim() || 'MDM-RBC-0000006194',
+    eventType: 'Purchase',
+    productId: 'mortgage-5yr-fixed',
+    productName: '5-Year Fixed Mortgage',
+    amount: 450000,
+    currency: 'CAD',
+    eventDateTime: isoNow()
+  }]),
+  segment_update: () => ([{
+    individualId: document.getElementById('e-individual-id').value.trim() || 'MDM-RBC-0000006194',
+    eventType: 'SegmentUpdate',
+    segmentName: 'HighValueProspect',
+    segmentValue: true,
+    eventDateTime: isoNow()
+  }])
+};
+
+document.querySelectorAll('.preset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const fn = PRESETS[btn.dataset.preset];
+    if (fn) document.getElementById('e-payload').value = JSON.stringify(fn(), null, 2);
+  });
+});
+
+// ── Event Ingestion ───────────────────────────────────────────────────────────
+let logEntries = [];
+function renderLog() {
+  const el = document.getElementById('e-log-entries');
+  if (!logEntries.length) {
+    el.innerHTML = '<div class="empty-state">No events sent yet.</div>';
+    return;
+  }
+  el.innerHTML = logEntries.slice().reverse().map(entry => `
+    <div class="log-entry">
+      <span class="log-ts">${entry.ts}</span>
+      <div>
+        <div class="log-event">${entry.object} · ${entry.recordCount} record(s)</div>
+        <div style="font-size:0.72rem;color:var(--text-light);">${entry.preview}</div>
+      </div>
+      <span class="log-status">${entry.status}</span>
+    </div>`).join('');
+}
+
+document.getElementById('e-clear-log-btn').addEventListener('click', () => {
+  logEntries = []; renderLog();
+});
+
+document.getElementById('e-send-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('e-send-btn');
+  const statusEl = document.getElementById('e-status-text');
+  const objectApiName = document.getElementById('e-object').value;
+  const payloadRaw = document.getElementById('e-payload').value.trim();
+
+  if (!objectApiName) { statusEl.textContent = '⚠ Select a target object first.'; return; }
+  if (!payloadRaw) { statusEl.textContent = '⚠ Payload is empty.'; return; }
+
+  let records;
+  try { records = JSON.parse(payloadRaw); } catch (e) { statusEl.textContent = '✗ Invalid JSON: ' + e.message; return; }
+  if (!Array.isArray(records)) records = [records];
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Ingesting…';
+  statusEl.textContent = '';
+
+  const entry = {
+    ts: ts(),
+    object: objectApiName,
+    recordCount: records.length,
+    preview: JSON.stringify(records[0]).slice(0, 80) + (JSON.stringify(records[0]).length > 80 ? '…' : ''),
+    status: '<span class="spinner"></span>'
+  };
+  logEntries.push(entry);
+  renderLog();
+
+  try {
+    const res = await fetch('/api/rtom/ingest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ objectApiName, records })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    entry.status = '<span class="badge badge-success">✓ Accepted</span>';
+    statusEl.textContent = `✓ Ingested ${records.length} record(s) into ${objectApiName}`;
+  } catch (err) {
+    entry.status = `<span class="badge badge-error">✗ Failed</span>`;
+    statusEl.textContent = '✗ ' + err.message;
+  }
+  renderLog();
+  btn.disabled = false;
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/></svg> Ingest Event(s)`;
+});
+
+// ── Channel helpers ───────────────────────────────────────────────────────────
+function onChannelChange() {
+  const sel = document.getElementById('d-anchor-type');
+  const opt = sel.options[sel.selectedIndex];
+  const name = opt ? (opt.dataset.name || '') : '';
+  document.getElementById('d-channel-name').value = name;
+  updateRequestPreview();
+}
+window.onChannelChange = onChannelChange;
+
+// ── Request Preview ───────────────────────────────────────────────────────────
+function buildDecisionRequestBody() {
+  const individualId = document.getElementById('d-individual-id').value.trim();
+  const dataspace = document.getElementById('d-dataspace').value.trim() || appConfig.defaultDataspace;
+  const pointName = document.getElementById('d-point-name').value.trim();
+  const anchorType = document.getElementById('d-anchor-type').value;
+  const channelName = document.getElementById('d-channel-name').value.trim();
+  const offerGroup = document.getElementById('d-offer-group').value.trim();
+  const requestUrl = document.getElementById('d-request-url')?.value.trim();
+  const diagnostics = document.getElementById('d-diagnostics')?.checked;
+
+  const unifiedIndividualId = MDM_TO_UNIFIED[individualId];
+  return {
+    context: {
+      individualId: individualId || '<individualId>',
+      ...(unifiedIndividualId && { unifiedIndividualId }),
+      dataspace,
+      ...(anchorType && { Channel: anchorType }),
+      ...(offerGroup && { Category: offerGroup })
+    },
+    personalizationPoints: [
+      { name: pointName || 'Eligable_Borealis_Ranking' }
+    ],
+    ...(diagnostics && { executionFlags: ['EnableDiagnostics'] })
+  };
+}
+
+function updateRequestPreview() {
+  const body = buildDecisionRequestBody();
+  const el = document.getElementById('d-request-preview');
+  if (el) el.textContent = 'POST /personalization/decisions\n\n' + JSON.stringify(body, null, 2);
+}
+window.updateRequestPreview = updateRequestPreview;
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+loadConfig();
+</script>
+</body>
+</html>
