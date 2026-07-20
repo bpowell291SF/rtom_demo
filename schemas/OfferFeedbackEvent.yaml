@@ -1,0 +1,39 @@
+openapi: 3.0.0
+info:
+  title: RTOM Offer Feedback Event Schema
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    OfferFeedbackEvent:
+      type: object
+      properties:
+        FeedbackEventId:
+          type: string
+          x-sf-type: text
+        PersonalizationDecisionId:
+          type: string
+          x-sf-type: text
+        OfferId:
+          type: string
+          x-sf-type: text
+        IndividualId:
+          type: string
+          x-sf-type: text
+        ChannelCode:
+          type: string
+          x-sf-type: text
+        Feedback:
+          type: string
+          x-sf-type: text
+        FeedbackReason:
+          type: string
+          x-sf-type: text
+        FeedbackTimestamp:
+          type: string
+          format: date-time
+          x-sf-type: datetime
+        LastModified:
+          type: string
+          format: date-time
+          x-sf-type: datetime

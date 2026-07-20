@@ -1,0 +1,33 @@
+openapi: 3.0.0
+info:
+  title: RTOM Channel Delivery Event Schema
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    ChannelDeliveryEvent:
+      type: object
+      properties:
+        DeliveryEventId:
+          type: string
+          x-sf-type: text
+        PersonalizationDecisionId:
+          type: string
+          x-sf-type: text
+        ChannelCode:
+          type: string
+          x-sf-type: text
+        DeliveryTimestamp:
+          type: string
+          format: date-time
+          x-sf-type: datetime
+        LastModified:
+          type: string
+          format: date-time
+          x-sf-type: datetime
+        OfferId:
+          type: string
+          x-sf-type: text
+        IndividualId:
+          type: string
+          x-sf-type: text
