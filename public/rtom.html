@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -174,7 +173,7 @@
       <div class="row">
         <div>
           <label for="d-point-name">Personalization Point</label>
-          <input type="text" id="d-point-name" placeholder="e.g. Eligable_Borealis_Ranking" oninput="updateRequestPreview()" />
+          <input type="text" id="d-point-name" placeholder="e.g. Borealis_Ranked_Offers_2" oninput="updateRequestPreview()" />
         </div>
         <div>
           <label for="d-anchor-type">Channel</label>
@@ -299,7 +298,7 @@
       <div class="row">
         <div>
           <label for="s-point">Personalization Point</label>
-          <input type="text" id="s-point" placeholder="e.g. Eligable_Borealis_Ranking" />
+          <input type="text" id="s-point" placeholder="e.g. Borealis_Ranked_Offers_2" />
         </div>
         <div>
           <label for="s-dataspace">Dataspace</label>
@@ -442,7 +441,7 @@ const MDM_TO_UNIFIED = {
 // ── Config ───────────────────────────────────────────────────────────────────
 let appConfig = {
   defaultDataspace: 'default',
-  personalizationPoints: ['Eligable_Borealis_Ranking'],
+  personalizationPoints: ['Borealis_Ranked_Offers_2'],
   simulationMdmIds: ['MDM-RBC-0000006194', 'MDM-RBC-0000001463'],
   ingestConfigured: false,
   ingestSourceApiName: '',
@@ -987,7 +986,7 @@ function buildDecisionRequestBody() {
       ...(offerGroup && { Category: offerGroup })
     },
     personalizationPoints: [
-      { name: pointName || 'Eligable_Borealis_Ranking' }
+      { name: pointName || 'Borealis_Ranked_Offers_2' }
     ],
     ...(diagnostics && { executionFlags: ['EnableDiagnostics'] })
   };
