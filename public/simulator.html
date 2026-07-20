@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RTOM Simulator – Proof of Decision</title>
+<style>
+  :root {
+    --sf-blue: #0176d3;
+    --sf-blue-dark: #0a2240;
+    --sf-green: #2e844a;
+    --sf-red: #c23934;
+    --sf-yellow: #f9c23c;
+    --sf-orange: #e07010;
+    --bg: #f3f3f3;
+    --card: #fff;
+    --border: #dddbda;
+    --text: #3e3e3c;
+    --text-light: #706e6b;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; background: var(--bg); color: var(--text); }
+
+  .header { background: var(--sf-blue-dark); color: #fff; padding: 1rem 2rem; display: flex; align-items: center; gap: 1.5rem; }
+  .header h1 { margin: 0; font-size: 1.2rem; font-weight: 700; }
+  .header .subtitle { margin: 0; font-size: 0.82rem; opacity: 0.8; }
+  .header-spacer { flex: 1; }
+  .nav-link { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 0.875rem; }
+  .nav-link:hover { color: #fff; }
+
+  .toolbar { background: var(--sf-blue-dark); padding: 0.75rem 2rem; display: flex; align-items: center; gap: 1rem; border-top: 1px solid rgba(255,255,255,0.1); flex-wrap: wrap; }
+  .toolbar label { color: rgba(255,255,255,0.8); font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+  .toolbar select, .toolbar input { padding: 0.4rem 0.75rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: #fff; font-size: 0.85rem; min-width: 220px; }
+  .toolbar select option { background: var(--sf-blue-dark); color: #fff; }
+  .toolbar .btn-run { background: var(--sf-yellow); color: #000; border: none; padding: 0.45rem 1.25rem; border-radius: 4px; font-size: 0.875rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .toolbar .btn-run:hover { background: #e5b030; }
+  .toolbar .btn-run:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; padding: 1.25rem 1.5rem; max-width: 1400px; margin: 0 auto; }
+  .layout-full { grid-column: 1 / -1; }
+
+  .panel { background: var(--card); border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); overflow: hidden; }
+  .panel-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.6rem; }
+  .panel-title { font-size: 0.85rem; font-weight: 700; color: var(--sf-blue); margin: 0; flex: 1; }
+  .panel-body { padding: 1rem; }
+
+  .badge { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 10px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  .badge-green { background: #d4edda; color: #155724; }
+  .badge-red { background: #f8d7da; color: #721c24; }
+  .badge-blue { background: #cce5ff; color: #004085; }
+  .badge-gray { background: #e2e3e5; color: #383d41; }
+  .badge-orange { background: #fff3cd; color: #856404; }
+
+  /* Borealis model output table */
+  .offer-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+  .offer-table th { background: #f5f7fa; text-align: left; padding: 0.4rem 0.6rem; border-bottom: 2px solid var(--border); font-size: 0.7rem; color: var(--text-light); font-weight: 600; white-space: nowrap; }
+  .offer-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+  .offer-table tr:hover td { background: #fafbff; }
+  .offer-table tr.top-offer td { background: #f0f9f4; }
+  .offer-table tr.matched td { background: #e8f4fd; font-weight: 600; }
+
+  .rank-badge { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-size: 0.7rem; font-weight: 700; background: var(--sf-blue); color: #fff; }
+  .rank-badge.rank-1 { background: #c9a227; }
+  .rank-badge.rank-2 { background: #aaa; }
+  .rank-badge.rank-3 { background: #9e6b3a; }
+
+  .channel-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .channel-chip { font-size: 0.65rem; padding: 0.15rem 0.45rem; border-radius: 10px; border: 1px solid var(--border); background: #f5f5f5; color: var(--text); }
+  .channel-chip.active { background: #d4edda; border-color: #b8dfc4; color: #155724; font-weight: 700; }
+
+  /* Proof section */
+  .proof-strip { background: linear-gradient(135deg, #0a2240, #0176d3); color: #fff; border-radius: 8px; padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 1.5rem; }
+  .proof-icon { font-size: 2.5rem; }
+  .proof-text h3 { margin: 0 0 0.25rem; font-size: 1rem; }
+  .proof-text p { margin: 0; font-size: 0.82rem; opacity: 0.85; }
+  .proof-match { margin-left: auto; text-align: center; }
+  .proof-match .big { font-size: 2rem; font-weight: 700; }
+  .proof-match .label { font-size: 0.72rem; opacity: 0.8; }
+
+  /* Decision result cards */
+  .decision-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.85rem; }
+  .decision-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .decision-card.matched { border-color: var(--sf-green); box-shadow: 0 0 0 2px rgba(46,132,74,0.2); }
+  .decision-card-img { height: 90px; background: #eee; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #aaa; overflow: hidden; }
+  .decision-card-img img { width: 100%; height: 100%; object-fit: cover; }
+  .decision-card-body { padding: 0.65rem; }
+  .decision-card-name { font-weight: 700; font-size: 0.78rem; }
+  .decision-card-id { font-size: 0.65rem; color: var(--text-light); font-family: monospace; }
+  .matched-banner { background: var(--sf-green); color: #fff; font-size: 0.65rem; font-weight: 700; text-align: center; padding: 0.2rem; }
+
+  /* CIO ranking tables */
+  .cio-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
+  .cio-card { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .cio-card-header { background: #f5f7fa; padding: 0.4rem 0.75rem; font-size: 0.72rem; font-weight: 700; color: var(--sf-blue); border-bottom: 1px solid var(--border); }
+  .cio-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.75rem; border-bottom: 1px solid #f5f5f5; font-size: 0.75rem; }
+  .cio-row.matched { background: #e8f4fd; font-weight: 600; }
+
+  .empty-state { text-align: center; padding: 3rem 2rem; color: var(--text-light); }
+  .empty-state .icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #ccc; border-top-color: var(--sf-blue); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-state { display: flex; align-items: center; gap: 0.75rem; padding: 2rem; color: var(--text-light); font-size: 0.875rem; }
+
+  .prob-bar-wrap { display: flex; align-items: center; gap: 0.4rem; }
+  .prob-bar { height: 6px; border-radius: 3px; background: #e0e0e0; flex: 1; min-width: 60px; }
+  .prob-bar-fill { height: 100%; border-radius: 3px; background: var(--sf-blue); }
+  .prob-val { font-size: 0.7rem; color: var(--text-light); white-space: nowrap; min-width: 28px; text-align: right; }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .cio-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div>
+    <h1>RTOM Simulator — Proof of Decision</h1>
+    <p class="subtitle">Data Graph RTDG4 · Borealis Model Output · Calculated Insights · Live Decisioning</p>
+  </div>
+  <div class="header-spacer"></div>
+  <a href="/rtom" class="nav-link">← RTOM</a>
+  <a href="/" class="nav-link">Home</a>
+</header>
+
+<div class="toolbar">
+  <label>Individual</label>
+  <select id="tb-persona">
+    <option value="MDM-RBC-0000006194">Veronica Robles — Young Professional</option>
+    <option value="MDM-RBC-0000002186">Guillaume Bouchard — New Homeowner</option>
+    <option value="MDM-RBC-0000004975" selected>Benjamin Trevino — Small Business Owner</option>
+    <option value="MDM-RBC-0000001463">Elizabeth Barrett — Retiree</option>
+    <option value="MDM-RBC-0000005392">Kevin Webb — Student</option>
+  </select>
+
+  <label>Channel</label>
+  <select id="tb-channel">
+    <option value="">— Any —</option>
+    <option value="0eFHu000000I1mHMAS" data-name="Direct Mail" data-code="DM">Direct Mail (DM)</option>
+    <option value="0eFHu000000I1mDMAS" data-name="Mortgage Specialist Outbound Calling" data-code="MM">Mortgage Specialist Outbound Calling (MM)</option>
+    <option value="0eFHu000000I1mMMAS" data-name="Branch/Call Center Advisor Insight" data-code="DO">Branch/Call Center Advisor Insight (DO)</option>
+    <option value="0eFHu000000I1nAMAS" data-name="Mobile Dashboard" data-code="MD">Mobile Dashboard (MD)</option>
+    <option value="0eFHu000000I1mvMAC" data-name="Mobile Sales Modal" data-code="MS">Mobile Sales Modal (MS)</option>
+    <option value="0eFHu000000I1mgMAC" data-name="Mobile" data-code="MB">Mobile (MB)</option>
+    <option value="0eFHu000000I1mbMAC" data-name="Branch Sales Tool" data-code="CC">Branch Sales Tool (CC)</option>
+    <option value="0eFHu000000I1mrMAC" data-name="Advice Center Dialer" data-code="RD">Advice Center Dialer (RD)</option>
+    <option value="0eFHu000000I1mWMAS" data-name="Online Banking Financial Offers" data-code="IN" selected>Online Banking Financial Offers (IN)</option>
+    <option value="0eFHu000000I1mlMAC" data-name="Online Banking Banner" data-code="IM">Online Banking Banner (IM)</option>
+    <option value="0eFHu000000I1m3MAC" data-name="Outbound Email" data-code="EM">Outbound Email (EM)</option>
+    <option value="0eFHu000000I1mqMAC" data-name="IVR - In-Bound Calling" data-code="IV">IVR - In-Bound Calling (IV)</option>
+    <option value="0eFHu000000I1m6MAC" data-name="Web" data-code="WB">Web</option>
+  </select>
+
+  <label>Personalization Point</label>
+  <input type="text" id="tb-point" value="Borealis_Ranked_Offers_2" />
+
+  <label>Category</label>
+  <select id="tb-category" style="min-width:150px;">
+    <option value="">— Any —</option>
+    <option value="0ZGHu000000TJEkOAO">Cross Border</option>
+    <option value="0ZGHu000000TJEfOAO">Payments</option>
+    <option value="0ZGHu000000TJEaOAO">Banking</option>
+    <option value="0ZGHu000000TJEVOA4">Wealth</option>
+    <option value="0ZGHu000000TJEQOA4">Mortgage</option>
+  </select>
+
+  <button class="btn-run" id="run-btn" onclick="runSimulation()">▶ Run Simulation</button>
+</div>
+
+<div id="main-content">
+  <div style="display:flex;align-items:center;justify-content:center;height:300px;color:var(--text-light);">
+    <div style="text-align:center;">
+      <div style="font-size:2.5rem;margin-bottom:0.75rem;">🎯</div>
+      <div style="font-size:0.9rem;">Select a persona and channel, then click <strong>Run Simulation</strong></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const MDM_TO_UNIFIED = {
+  'MDM-RBC-0000006194': '038ea41f2fe02902d874764a2d258da2',
+  'MDM-RBC-0000002186': 'e0a32d05fd40da491ab6ef5eca3d68e3',
+  'MDM-RBC-0000004975': '38a2c923f8b8bb1c0eadc92263779627',
+  'MDM-RBC-0000001463': 'a433e720860d53f81126250a444969c7',
+  'MDM-RBC-0000005392': '8485a4fd8c90d30f7a999a82d461dd05',
+};
+
+const CHANNEL_MAP = {
+  DM: 'DM_Eligible__c', MM: 'MM_Eligible__c', DO: 'DO_Eligible__c',
+  MD: 'MD_Eligible__c', MS: 'MS_Eligible__c', MB: 'MB_Eligible__c',
+  CC: 'CC_Eligible__c', RD: 'RD_Eligible__c', IN: 'IN_Eligible__c',
+  IM: 'IM_Eligible__c', EM: 'EM_Eligible__c', IV: 'IV_Eligible__c'
+};
+const CHANNEL_PROB_MAP = {
+  DM: 'DM_Probability__c', MM: 'MM_Probability__c', DO: 'DO_Probability__c',
+  MD: 'MD_Probability__c', MS: 'MS_Probability__c', MB: 'MB_Probability__c',
+  CC: 'CC_Probability__c', RD: 'RD_Probability__c', IN: 'IN_Probability__c',
+  IM: 'IM_Probability__c', EM: 'EM_Probability__c', IV: 'IV_Probability__c'
+};
+const ALL_CHANNELS = ['CC','DM','DO','EM','IM','IN','IV','MB','MD','MM','MS','RD'];
+
+function getSelectedChannel() {
+  const sel = document.getElementById('tb-channel');
+  const opt = sel.options[sel.selectedIndex];
+  return {
+    sfid: opt.value,
+    name: opt.dataset.name || '',
+    code: opt.dataset.code || ''
+  };
+}
+
+function probBar(val, max=100) {
+  const pct = max > 0 ? Math.round((val / max) * 100) : 0;
+  return `<div class="prob-bar-wrap">
+    <div class="prob-bar"><div class="prob-bar-fill" style="width:${Math.min(pct,100)}%"></div></div>
+    <span class="prob-val">${val ?? '—'}</span>
+  </div>`;
+}
+
+function eligBadge(val) {
+  return val === 1
+    ? '<span class="badge badge-green">✓ Eligible</span>'
+    : '<span class="badge badge-red">✗ Ineligible</span>';
+}
+
+async function runSimulation() {
+  const btn = document.getElementById('run-btn');
+  const persona = document.getElementById('tb-persona');
+  const personaOpt = persona.options[persona.selectedIndex];
+  const mdmId = persona.value;
+  const personaName = personaOpt.text;
+  const channel = getSelectedChannel();
+  const point = document.getElementById('tb-point').value.trim() || 'Borealis_Ranked_Offers_2';
+  const category = document.getElementById('tb-category').value.trim();
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Running…';
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="layout">
+      <div class="layout-full loading-state"><span class="spinner"></span> Fetching Data Graph RTDG4 and live decision…</div>
+    </div>`;
+
+  try {
+    const [profileRes, decisionRes] = await Promise.all([
+      fetch(`/api/profile?individualId=${encodeURIComponent(MDM_TO_UNIFIED[mdmId] || mdmId)}&graph=RTDG4`).then(r => r.json()),
+      fetch('/api/personalization/decisions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          context: {
+            individualId: mdmId,
+            dataspace: 'default',
+            ...(channel.sfid && { channelId: channel.sfid }),
+            ...(category && { categoryId: category })
+          },
+          personalizationPoints: [{ name: point }],
+          executionFlags: ['EnableDiagnostics']
+        })
+      }).then(r => r.json())
+    ]);
+
+    render(mdmId, personaName, channel, point, category, profileRes, decisionRes);
+  } catch (err) {
+    document.getElementById('main-content').innerHTML =
+      `<div style="padding:2rem;color:var(--sf-red)">Error: ${err.message}</div>`;
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '▶ Run Simulation';
+}
+
+function extractBorealisData(profileData) {
+  // Dig into UnifiedLinkssotIndividualIndv__dlm → ssot__Individual__dlm → Borealis_Model_Output_dlm_copy__dlm
+  const offers = [];
+  const links = profileData?.UnifiedLinkssotIndividualIndv__dlm || [];
+  for (const link of links) {
+    for (const ind of (link.ssot__Individual__dlm || [])) {
+      for (const o of (ind.Borealis_Model_Output_dlm_copy__dlm || [])) {
+        offers.push(o);
+      }
+    }
+  }
+  return offers;
+}
+
+function normalizeDecisionOffer(item) {
+  if (!item) return null;
+  const i = item.Offer_Treatment ? { ...item, ...item.Offer_Treatment } : item;
+  return {
+    id: i.ssot__Id__c || i.personalizationContentId || null,
+    name: i.ssot__Name__c || '',
+    heading: i.ssot__OfferHeadingText__c || i.ssot__Name__c || '',
+    body: i.ssot__OfferBodyText__c || '',
+    imageUrl: i.ssot__ImageUrl__c || '',
+    ctaText: i.ssot__CallToActionText__c || 'Learn More',
+    ctaUrl: i.ssot__CallToActionUrl__c || '#',
+    raw: i
+  };
+}
+
+function render(mdmId, personaName, channel, point, category, profileRes, decisionRes) {
+  const profileData = profileRes.data || {};
+  const borealisOffers = extractBorealisData(profileData);
+  const boostedRanking = profileData.Boosted_Offer_Ranking__cio || [];
+  const borealisRanking = profileData.BorealisOfferRanking12__cio || [];
+  const boostedRanking2 = profileData.BoostedOfferRanking2__cio || [];
+
+  const decisionItems = decisionRes.personalizations?.[0]?.data || [];
+  const decisionOffers = decisionItems.map(normalizeDecisionOffer).filter(Boolean);
+  const decisionOfferIds = new Set(decisionOffers.map(o => o.id).filter(Boolean));
+
+  // Find matching SF_OFFER_IDs from Borealis that appear in the decision
+  const borealisByOfferId = {};
+  for (const o of borealisOffers) {
+    if (o.SF_OFFER_ID__c) borealisByOfferId[o.SF_OFFER_ID__c] = o;
+  }
+
+  const matchCount = decisionOffers.filter(o => borealisByOfferId[o.id]).length;
+  const channelCode = channel.code;
+  const eligField = CHANNEL_MAP[channelCode];
+  const probField = CHANNEL_PROB_MAP[channelCode];
+
+  // Sort Borealis offers by Recommended_Action_Rank__c
+  const sortedBorealis = [...borealisOffers].sort((a, b) =>
+    (a.Recommended_Action_Rank__c ?? 99) - (b.Recommended_Action_Rank__c ?? 99)
+  );
+
+  document.getElementById('main-content').innerHTML = `
+<div class="layout">
+
+  <!-- Proof Strip -->
+  <div class="layout-full">
+    <div class="proof-strip">
+      <div class="proof-icon">✅</div>
+      <div class="proof-text">
+        <h3>${personaName}</h3>
+        <p>MDM ID: ${mdmId} · Channel: ${channel.name || 'Any'} · Point: ${point}${category ? ' · Category: ' + category : ''}</p>
+      </div>
+      <div class="proof-match">
+        <div class="big">${matchCount} / ${decisionOffers.length}</div>
+        <div class="label">Borealis → Decision matches</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Left: Data Graph -->
+  <div>
+
+    <!-- Borealis Model Output -->
+    <div class="panel" style="margin-bottom:1rem;">
+      <div class="panel-header">
+        <span class="panel-title">🧠 Borealis Model Output (RTDG4)</span>
+        <span class="badge badge-blue">${borealisOffers.length} offers</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="offer-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Action Code</th>
+              <th>SF Offer ID</th>
+              ${channelCode ? `<th>${channelCode} Eligible</th><th>${channelCode} Prob</th>` : '<th>Rec. Channels</th>'}
+              <th>Exp. Value</th>
+              <th>In Decision?</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sortedBorealis.map(o => {
+              const inDecision = decisionOfferIds.has(o.SF_OFFER_ID__c);
+              const isTop = o.Recommended_Action__c === 1;
+              const rank = o.Recommended_Action_Rank__c;
+              const elig = eligField ? o[eligField] : null;
+              const prob = probField ? o[probField] : null;
+              const channels = o.Recommended_Channels__c || '';
+              return `<tr class="${inDecision ? 'matched' : ''} ${isTop ? 'top-offer' : ''}">
+                <td><span class="rank-badge ${rank <= 3 ? 'rank-'+rank : ''}">${rank ?? '—'}</span></td>
+                <td><strong>${o.Action_Code__c || '—'}</strong></td>
+                <td style="font-family:monospace;font-size:0.68rem;">${o.SF_OFFER_ID__c || '—'}</td>
+                ${channelCode ? `<td>${elig !== null ? eligBadge(elig) : '—'}</td><td>${prob !== undefined ? probBar(prob) : '—'}</td>` :
+                  `<td><div class="channel-chips">${channels.split(',').map(c => c.trim()).filter(Boolean).map(c =>
+                    `<span class="channel-chip ${channelCode && c === channelCode ? 'active' : ''}">${c}</span>`).join('')}</div></td>`}
+                <td>${o.Expected_Value_Uplift__c !== undefined ? '$'+o.Expected_Value_Uplift__c : '—'}</td>
+                <td>${inDecision ? '<span class="badge badge-green">✓ Match</span>' : '<span class="badge badge-gray">—</span>'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Calculated Insights: CIO Rankings -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">📊 Calculated Insights — Offer Rankings</span>
+      </div>
+      <div class="panel-body">
+        <div class="cio-grid">
+          <div class="cio-card">
+            <div class="cio-card-header">Boosted Offer Ranking</div>
+            ${boostedRanking.sort((a,b)=>(a.boosted_rank__c??99)-(b.boosted_rank__c??99)).map(r => `
+              <div class="cio-row ${decisionOfferIds.has(r.offer_id__c) ? 'matched' : ''}">
+                <span class="rank-badge ${r.boosted_rank__c<=3?'rank-'+r.boosted_rank__c:''}">${r.boosted_rank__c}</span>
+                <span style="font-family:monospace;font-size:0.68rem;flex:1;">${r.offer_id__c || '—'}</span>
+                ${decisionOfferIds.has(r.offer_id__c) ? '<span class="badge badge-green" style="font-size:0.6rem;">✓</span>' : ''}
+              </div>`).join('')}
+          </div>
+          <div class="cio-card">
+            <div class="cio-card-header">Borealis Offer Ranking</div>
+            ${borealisRanking.sort((a,b)=>(a.offer_rank__c??99)-(b.offer_rank__c??99)).map(r => `
+              <div class="cio-row ${decisionOfferIds.has(r.offer_id__c) ? 'matched' : ''}">
+                <span class="rank-badge ${r.offer_rank__c<=3?'rank-'+r.offer_rank__c:''}">${r.offer_rank__c ?? '—'}</span>
+                <span style="font-family:monospace;font-size:0.68rem;flex:1;">${r.offer_id__c || '—'}</span>
+                ${decisionOfferIds.has(r.offer_id__c) ? '<span class="badge badge-green" style="font-size:0.6rem;">✓</span>' : ''}
+              </div>`).join('')}
+          </div>
+          <div class="cio-card">
+            <div class="cio-card-header">Boosted Offer Ranking 2</div>
+            ${boostedRanking2.sort((a,b)=>(a.boosted_rank__c??99)-(b.boosted_rank__c??99)).map(r => `
+              <div class="cio-row ${decisionOfferIds.has(r.offer_id__c) ? 'matched' : ''}">
+                <span class="rank-badge ${r.boosted_rank__c<=3?'rank-'+r.boosted_rank__c:''}">${r.boosted_rank__c}</span>
+                <span style="font-family:monospace;font-size:0.68rem;flex:1;">${r.offer_id__c || '—'}</span>
+                ${decisionOfferIds.has(r.offer_id__c) ? '<span class="badge badge-green" style="font-size:0.6rem;">✓</span>' : ''}
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right: Live Decision Result -->
+  <div>
+    <div class="panel" style="margin-bottom:1rem;">
+      <div class="panel-header">
+        <span class="panel-title">⚡ Live Decision — Personalization API</span>
+        <span class="badge ${decisionOffers.length > 0 ? 'badge-green' : 'badge-gray'}">${decisionOffers.length} returned</span>
+      </div>
+      <div class="panel-body">
+        ${decisionOffers.length === 0
+          ? '<div class="empty-state"><div class="icon">🚫</div><div>No offers returned by the Decisioning API for this context.</div></div>'
+          : `<div class="decision-cards">
+            ${decisionOffers.map(o => {
+              const inBorealis = !!borealisByOfferId[o.id];
+              const bOffer = borealisByOfferId[o.id];
+              return `<div class="decision-card ${inBorealis ? 'matched' : ''}">
+                ${inBorealis ? '<div class="matched-banner">✓ Borealis Match</div>' : ''}
+                <div class="decision-card-img">${o.imageUrl
+                  ? `<img src="${o.imageUrl}" loading="lazy" alt="${o.heading}" onerror="this.parentElement.innerHTML='🏦'">`
+                  : '🏦'}</div>
+                <div class="decision-card-body">
+                  <div class="decision-card-name">${o.heading || o.name}</div>
+                  <div class="decision-card-id">${o.id || '—'}</div>
+                  ${bOffer ? `<div style="margin-top:0.4rem;font-size:0.7rem;color:var(--text-light);">
+                    Action: <strong>${bOffer.Action_Code__c}</strong> ·
+                    Rank: <strong>${bOffer.Recommended_Action_Rank__c}</strong><br>
+                    ${eligField ? `${channelCode} Elig: ${eligBadge(bOffer[eligField])}` : ''}
+                  </div>` : ''}
+                </div>
+              </div>`;
+            }).join('')}
+          </div>`}
+      </div>
+    </div>
+
+    <!-- Eligibility breakdown for selected channel -->
+    ${channelCode && borealisOffers.length ? `
+    <div class="panel" style="margin-bottom:1rem;">
+      <div class="panel-header">
+        <span class="panel-title">🔍 Channel Eligibility — ${channelCode} (${channel.name})</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="offer-table">
+          <thead><tr>
+            <th>Action Code</th>
+            <th>Eligible</th>
+            <th>Probability</th>
+            <th>Exp. Value Uplift</th>
+            <th>Rank</th>
+          </tr></thead>
+          <tbody>
+            ${sortedBorealis.map(o => `
+              <tr class="${decisionOfferIds.has(o.SF_OFFER_ID__c) ? 'matched' : ''}">
+                <td><strong>${o.Action_Code__c}</strong></td>
+                <td>${eligBadge(o[eligField])}</td>
+                <td>${o[probField] !== undefined ? probBar(o[probField]) : '—'}</td>
+                <td>${o.Expected_Value_Uplift__c !== undefined ? '$'+o.Expected_Value_Uplift__c : '—'}</td>
+                <td><span class="rank-badge">${o.Recommended_Action_Rank__c ?? '—'}</span></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>` : ''}
+
+    <!-- Diagnostics -->
+    ${decisionRes.diagnostics ? `
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">🩺 Diagnostics</span></div>
+      <div class="panel-body">
+        <pre style="font-size:0.7rem;font-family:monospace;max-height:250px;overflow:auto;margin:0;white-space:pre-wrap;">${JSON.stringify(decisionRes.diagnostics, null, 2)}</pre>
+      </div>
+    </div>` : ''}
+
+  </div>
+
+</div>`;
+}
+</script>
+</body>
+</html>
