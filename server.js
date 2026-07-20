@@ -306,31 +306,42 @@ app.post('/api/personalization/request', async (req, res) => {
 const DEFAULT_DATASPACE = process.env.PERSONALIZATION_DEFAULT_DATASPACE || 'default';
 const DEFAULT_PERSONALIZATION_POINT = process.env.PERSONALIZATION_DEFAULT_POINT || 'Borealis_Ranked_Offers_2';
 
-function unwrapTreatmentFields(item) {
-  if (!item || typeof item !== 'object') return null;
-  if (item.ssot__Name__c || item.ssot__OfferHeadingText__c || item.ssot__OfferBodyText__c) {
-    return item; // fields already live at the item root
-  }
-  const nested = item.ssot__OfferTreatment__dlm || item.Offer_Treatment || item.OfferTreatment || item.offer_treatment;
-  if (Array.isArray(nested) && nested.length) return { ...item, ...nested[0] };
-  if (nested && typeof nested === 'object') return { ...item, ...nested };
-  return item;
-}
-
+/**
+ * Real payload shape (confirmed from a live example): each item in
+ * personalizations[i].data[] is an Offer, with rendering fields (heading,
+ * body, image, CTA) nested one level down under ssot__OfferTreatment__dlm.
+ * The Offer and its Treatment each have their OWN ssot__Id__c — these are
+ * different identifiers (Offer ID vs Treatment ID) and must not be
+ * conflated. OfferId used for ChannelDeliveryEvent/OfferFeedbackEvent
+ * logging should always be the OFFER-level id, to stay consistent with
+ * writeDeliveryEvent() (which reads the raw item's root ssot__Id__c directly).
+ */
 function normalizeOfferTreatment(rawItem) {
-  const item = unwrapTreatmentFields(rawItem);
-  if (!item) return null;
+  if (!rawItem || typeof rawItem !== 'object') return null;
+
+  const treatment =
+    rawItem.ssot__OfferTreatment__dlm ||
+    rawItem.Offer_Treatment ||
+    rawItem.OfferTreatment ||
+    rawItem.offer_treatment ||
+    rawItem; // fallback: fields already flat at root (older/alternate shape)
+
+  const offerId = rawItem.ssot__Id__c || null;          // Offer ID (root level — use for OfferId in events)
+  const treatmentId = treatment.ssot__Id__c || null;     // Treatment ID (distinct — do NOT use as OfferId)
+  const offerName = rawItem.ssot__Name__c || '';         // e.g. "RRSP Acquisition"
+
   return {
-    id: item.ssot__Id__c || item.personalizationContentId || null,
-    contentId: item.personalizationContentId || null,
-    name: item.ssot__Name__c || '',
-    heading: item.ssot__OfferHeadingText__c || item.ssot__Name__c || '',
-    body: item.ssot__OfferBodyText__c || '',
-    imageUrl: item.ssot__ImageUrl__c || '',
-    ctaText: item.ssot__CallToActionText__c || 'Learn More',
-    ctaUrl: item.ssot__CallToActionUrl__c || '#',
-    channelTypeId: item.ssot__EngagementChannelType__c || null,
-    raw: item
+    id: offerId,
+    treatmentId,
+    contentId: rawItem.personalizationContentId || null,
+    name: offerName || treatment.ssot__Name__c || '',
+    heading: treatment.ssot__OfferHeadingText__c || offerName || '',
+    body: treatment.ssot__OfferBodyText__c || rawItem.ssot__Description__c || '',
+    imageUrl: treatment.ssot__ImageUrl__c || '',
+    ctaText: treatment.ssot__CallToActionText__c || 'Learn More',
+    ctaUrl: treatment.ssot__CallToActionUrl__c || '#',
+    channelTypeId: treatment.ssot__EngagementChannelType__c || null,
+    raw: rawItem
   };
 }
 
@@ -384,6 +395,13 @@ app.get('/api/offers', async (req, res) => {
     const result = await callPersonalizationApi(requestBody);
     const rawItems = (result.personalizations && result.personalizations[0] && result.personalizations[0].data) || [];
     const offers = dedupeOffersById(rawItems.map(normalizeOfferTreatment).filter(Boolean));
+
+    // Log offer views (ChannelDeliveryEvent) — same helper already used by
+    // /api/personalization/decisions and /api/personalization/request, just
+    // not previously wired into this route. ChannelCode here is the page
+    // context (Home/Offers/Mortgages) via anchorType, not a literal channel
+    // type like Web/Email/Mobile — see note in chat if that should change.
+    writeDeliveryEvent(result, anchorType, individualId);
 
     res.json({
       success: true,
@@ -476,6 +494,10 @@ app.get('/mortgages', (req, res) => {
 
 app.get('/console', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'console.html'));
+});
+
+app.get('/offerslog', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'offerslog.html'));
 });
 
 app.get('/', (req, res) => {
@@ -658,6 +680,61 @@ function writeDeliveryEvent(result, channelId, individualId) {
     req.end();
   }).catch(err => console.error('writeDeliveryEvent token error:', err.message));
 }
+
+/**
+ * ---------------------------------------------------------------------
+ * OfferFeedbackEvent — logs a customer's response to an offer (Interested /
+ * Not Interested / Need More Information / Maybe Later) via the Ingestion
+ * API, using the same generic callIngestApi(objectApiName, records) helper
+ * already used elsewhere in this file (unlike writeDeliveryEvent, which
+ * duplicates the raw HTTP call directly — this reuses the existing helper
+ * since it's exactly what it's for).
+ *
+ * Schema: schemas/OfferFeedbackEvent.yaml
+ * ---------------------------------------------------------------------
+ */
+function writeFeedbackEvent({ decisionId, offerId, individualId, channelId, feedback, feedbackReason }) {
+  const now = new Date().toISOString();
+  const feedbackEventId = `${offerId || 'unknown'}-${feedback}-${Date.now()}`.slice(0, 255);
+  const record = {
+    FeedbackEventId: feedbackEventId,
+    PersonalizationDecisionId: decisionId || '',
+    OfferId: offerId || '',
+    IndividualId: individualId || '',
+    ChannelCode: channelId || '',
+    Feedback: feedback || '',
+    FeedbackReason: feedbackReason || '',
+    FeedbackTimestamp: now,
+    LastModified: now
+  };
+  return callIngestApi('OfferFeedbackEvent', [record]).then(() => record);
+}
+
+const VALID_FEEDBACK_RESPONSES = ['Interested', 'Not Interested', 'Need More Information', 'Maybe Later'];
+
+// POST /api/offers/feedback — called by offerslog.html after a feedback
+// link is clicked in the offer modal.
+app.post('/api/offers/feedback', async (req, res) => {
+  try {
+    const { individualId, decisionId, offerId, channelId, response, feedbackReason } = req.body;
+
+    if (!response || !VALID_FEEDBACK_RESPONSES.includes(response)) {
+      return res.status(400).json({ success: false, error: `response must be one of: ${VALID_FEEDBACK_RESPONSES.join(', ')}` });
+    }
+    if (!offerId) {
+      return res.status(400).json({ success: false, error: 'offerId is required' });
+    }
+
+    const record = await writeFeedbackEvent({
+      decisionId, offerId, individualId, channelId, feedback: response, feedbackReason
+    });
+
+    res.json({ success: true, logged: record });
+  } catch (error) {
+    console.error('POST /api/offers/feedback error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // Frontend config for RTOM page
 app.get('/api/rtom/config', (req, res) => {
