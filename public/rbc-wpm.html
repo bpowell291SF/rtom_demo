@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RBC | Offers Picked For You</title>
+
+<!-- Interactions SDK / beacon — required for WPM to publish onto this page -->
+<script type="text/javascript" src="https://cdn.c360a.salesforce.com/beacon/c360a/6ac190d2-56d8-4600-8e83-007537e3f2ff/scripts/c360a.min.js"></script>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          rbcnavy: '#00274D',
+          rbcblue: '#0059B3',
+          rbcskylight: '#EAF3FB',
+          rbcyellow: '#FFD200',
+        },
+        fontFamily: {
+          sans: ['Helvetica Neue','Arial','sans-serif'],
+        }
+      }
+    }
+  }
+</script>
+<style>
+  html { scroll-behavior: smooth; }
+  .card-lift { transition: transform .2s ease, box-shadow .2s ease; }
+  .card-lift:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -8px rgba(0,39,77,0.25); }
+  @media (prefers-reduced-motion: reduce) {
+    .card-lift { transition: none; }
+  }
+  .offer-image { width: 100%; height: 8rem; object-fit: cover; background: #EAF3FB; display: block; }
+</style>
+</head>
+<body class="bg-white font-sans text-slate-800">
+
+  <!-- Top utility bar -->
+  <div class="bg-rbcnavy text-white text-xs">
+    <div class="max-w-6xl mx-auto px-4 py-1.5 flex justify-between items-center">
+      <span class="hidden sm:inline text-blue-100">Personal Banking</span>
+      <div class="flex items-center gap-4 ml-auto">
+        <a href="#" class="hover:underline text-blue-100">Find a Branch</a>
+        <a href="#" class="hover:underline text-blue-100">Contact Us</a>
+        <a href="#" class="hover:underline text-blue-100">EN | FR</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main nav -->
+  <header class="bg-rbcblue text-white sticky top-0 z-30 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <img src="https://www.rbcroyalbank.com/dvl/assets/images/logos/rbc-logo-shield.svg" alt="RBC" class="h-8 w-auto" />
+        <span class="text-xl font-bold tracking-tight">RBC</span>
+        <span class="hidden md:inline text-blue-100 font-light ml-2 pl-2 border-l border-blue-300/50">Royal Bank</span>
+      </div>
+      <nav class="hidden lg:flex items-center gap-6 text-sm font-medium">
+        <a href="#" class="hover:text-rbcyellow">Accounts</a>
+        <a href="#" class="hover:text-rbcyellow">Credit Cards</a>
+        <a href="#" class="hover:text-rbcyellow">Mortgages</a>
+        <a href="#" class="hover:text-rbcyellow">Investments</a>
+        <a href="#" class="text-rbcyellow font-semibold">Offers</a>
+      </nav>
+      <button class="bg-white text-rbcnavy text-sm font-semibold px-4 py-1.5 rounded hover:bg-blue-50 transition">
+        Sign In
+      </button>
+    </div>
+  </header>
+
+  <!-- Unauthenticated personalization banner -->
+  <div class="bg-rbcskylight border-b border-blue-100">
+    <div class="max-w-6xl mx-auto px-4 py-2.5 flex flex-wrap items-center gap-2 text-sm text-rbcnavy">
+      <svg class="w-4 h-4 text-rbcblue shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>You're browsing as a guest — here are some of our most popular offers right now.
+        <a href="#" class="underline font-semibold hover:text-rbcblue">Sign in</a> to see offers tailored to your accounts.
+      </span>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <section class="bg-gradient-to-b from-rbcnavy to-rbcblue text-white">
+    <div class="max-w-6xl mx-auto px-4 py-12 md:py-16">
+      <p class="text-rbcyellow font-semibold text-sm tracking-wide uppercase mb-2">Offers &amp; Promotions</p>
+      <h1 class="text-3xl md:text-4xl font-bold max-w-2xl leading-tight">Deals picked out for you, this week.</h1>
+      <p class="mt-3 text-blue-100 max-w-xl">Explore a few of our current offers on banking, credit cards, and mortgages — apply online in minutes.</p>
+    </div>
+  </section>
+
+  <!--
+    OFFERS GRID — PERSONALIZATION TARGET
+    Each offer below exposes exactly 5 individually-targetable elements —
+    NOT one swappable HTML block. This matters: WPM's manual element editor
+    (and most Personalization Point setups) work by editing a specific
+    existing element's text/src/href in place. Targeting a whole card's
+    innerHTML previously caused the HTML-escaping issue documented earlier
+    in this project; targeting these 5 plain elements individually avoids
+    that entirely, since nothing here ever needs to inject markup — only
+    plain text or a URL into an attribute.
+
+    For Offer 1, the 5 targetable elements are:
+      #offer1-heading   -> Offer Heading      (text content)
+      #offer1-image     -> Image URL          (src attribute)
+      #offer1-body      -> Offer Body         (text content)
+      #offer1-cta       -> Call to Action     (text content = button caption,
+                                                href attribute = CTA URL)
+    Offer 2 / Offer 3 follow the same pattern with offer2-*/offer3-* ids.
+
+    Default values below are placeholders, populated by the small script at
+    the bottom of this file — replace them with real content once WPM/the
+    Personalization Point is wired up to override these same elements.
+  -->
+  <section class="max-w-6xl mx-auto px-4 py-10 md:py-14">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-xl md:text-2xl font-bold text-rbcnavy">Featured for you</h2>
+      <span class="text-xs text-slate-500 hidden sm:inline">Showing 3 of many offers</span>
+    </div>
+
+    <div id="offers-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+      <!-- Offer 1 -->
+      <div class="card-lift bg-white border border-slate-200 rounded-lg overflow-hidden flex flex-col">
+        <img id="offer1-image" class="offer-image" src="" alt="Offer 1 image" />
+        <div class="p-5 flex flex-col flex-1">
+          <h3 id="offer1-heading" class="font-bold text-rbcnavy text-base leading-snug mb-2"></h3>
+          <p id="offer1-body" class="text-sm text-slate-600 mb-4 flex-1"></p>
+          <a id="offer1-cta" href="#" class="mt-auto w-full text-center bg-rbcblue text-white text-sm font-semibold py-2.5 rounded hover:bg-rbcnavy transition"></a>
+        </div>
+      </div>
+
+      <!-- Offer 2 -->
+      <div class="card-lift bg-white border border-slate-200 rounded-lg overflow-hidden flex flex-col">
+        <img id="offer2-image" class="offer-image" src="" alt="Offer 2 image" />
+        <div class="p-5 flex flex-col flex-1">
+          <h3 id="offer2-heading" class="font-bold text-rbcnavy text-base leading-snug mb-2"></h3>
+          <p id="offer2-body" class="text-sm text-slate-600 mb-4 flex-1"></p>
+          <a id="offer2-cta" href="#" class="mt-auto w-full text-center bg-rbcblue text-white text-sm font-semibold py-2.5 rounded hover:bg-rbcnavy transition"></a>
+        </div>
+      </div>
+
+      <!-- Offer 3 -->
+      <div class="card-lift bg-white border border-slate-200 rounded-lg overflow-hidden flex flex-col">
+        <img id="offer3-image" class="offer-image" src="" alt="Offer 3 image" />
+        <div class="p-5 flex flex-col flex-1">
+          <h3 id="offer3-heading" class="font-bold text-rbcnavy text-base leading-snug mb-2"></h3>
+          <p id="offer3-body" class="text-sm text-slate-600 mb-4 flex-1"></p>
+          <a id="offer3-cta" href="#" class="mt-auto w-full text-center bg-rbcblue text-white text-sm font-semibold py-2.5 rounded hover:bg-rbcnavy transition"></a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Help footer strip -->
+  <section class="bg-rbcskylight">
+    <div class="max-w-6xl mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div>
+        <h3 class="font-bold text-rbcnavy">Need help choosing?</h3>
+        <p class="text-sm text-slate-600">Book a free chat with an RBC advisor, available 24/7.</p>
+      </div>
+      <button class="bg-rbcblue text-white text-sm font-semibold px-5 py-2.5 rounded hover:bg-rbcnavy transition">Book an Appointment</button>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-rbcnavy text-blue-200 text-xs">
+    <div class="max-w-6xl mx-auto px-4 py-6 flex flex-col sm:flex-row justify-between gap-3">
+      <p>&copy; 2026 Royal Bank of Canada — Prototype demo, not an official RBC product.</p>
+      <div class="flex gap-4">
+        <a href="#" class="hover:underline">Legal</a>
+        <a href="#" class="hover:underline">Privacy &amp; Security</a>
+        <a href="#" class="hover:underline">Accessibility</a>
+      </div>
+    </div>
+  </footer>
+
+<script>
+  // =====================================================================
+  // Default/placeholder offer content — loaded via JavaScript into the
+  // 5 elements per offer described above. This is intentionally simple:
+  // no innerHTML writes, no re-rendering loop — just five direct
+  // textContent/src/href assignments per offer, run once on page load.
+  //
+  // Once WPM / a Personalization Point is wired up to this page, it can
+  // target and override any of these 5 elements per offer directly and
+  // independently — this script only supplies the starting/fallback state.
+  // =====================================================================
+  const DEFAULT_OFFERS = [
+    {
+      slot: 'offer1',
+      heading: 'Open a Chequing Account, Get a New iPad',
+      imageUrl: 'https://www.rbcroyalbank.com/mortgages/_assets-custom/images/fthb-steps/2.jpg',
+      body: 'Open an eligible RBC chequing account and set up a qualifying direct deposit to receive a new iPad, on us.',
+      ctaText: 'View Chequing Accounts',
+      ctaUrl: 'https://www.rbcroyalbank.com/bank-accounts/index.html'
+    },
+    {
+      slot: 'offer2',
+      heading: 'RBC Avion Visa Infinite — Welcome Bonus Points',
+      imageUrl: 'https://www.rbcroyalbank.com/investments/_assets-custom/images/tfsa-2020-banner.jpg',
+      body: 'Apply and get approved for the Avion Visa Infinite card, then earn bonus Avion points after your first purchase within 90 days.',
+      ctaText: 'Explore Avion Visa Infinite',
+      ctaUrl: 'https://www.rbcroyalbank.com/credit-cards/travel/avion-visa-infinite.html'
+    },
+    {
+      slot: 'offer3',
+      heading: 'Get Up to $5,900 in Value with an Eligible Mortgage',
+      imageUrl: 'https://www.rbcroyalbank.com/mortgages/_assets-custom/images/fthb-steps/2.jpg',
+      body: 'Take out or switch an eligible RBC mortgage and access a bundle of value, including rate discounts, cash back, and account credits.',
+      ctaText: 'Talk to a Mortgage Specialist',
+      ctaUrl: 'https://www.rbcroyalbank.com/mortgages/index.html'
+    }
+  ];
+
+  function renderDefaultOffer(offer) {
+    const heading = document.getElementById(offer.slot + '-heading');
+    const image = document.getElementById(offer.slot + '-image');
+    const body = document.getElementById(offer.slot + '-body');
+    const cta = document.getElementById(offer.slot + '-cta');
+
+    if (heading) heading.textContent = offer.heading;
+    if (image) { image.src = offer.imageUrl; image.alt = offer.heading; }
+    if (body) body.textContent = offer.body;
+    if (cta) { cta.textContent = offer.ctaText; cta.href = offer.ctaUrl; }
+  }
+
+  DEFAULT_OFFERS.forEach(renderDefaultOffer);
+</script>
+</body>
+</html>
