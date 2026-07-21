@@ -329,10 +329,12 @@ function normalizeOfferTreatment(rawItem) {
   const offerId = rawItem.ssot__Id__c || null;          // Offer ID (root level — use for OfferId in events)
   const treatmentId = treatment.ssot__Id__c || null;     // Treatment ID (distinct — do NOT use as OfferId)
   const offerName = rawItem.ssot__Name__c || '';         // e.g. "RRSP Acquisition"
+  const productCategoryId = (rawItem.ssot__OfferProductCategory__dlm && rawItem.ssot__OfferProductCategory__dlm.ssot__ProductCategoryId__c) || null;
 
   return {
     id: offerId,
     treatmentId,
+    productCategoryId,
     contentId: rawItem.personalizationContentId || null,
     name: offerName || treatment.ssot__Name__c || '',
     heading: treatment.ssot__OfferHeadingText__c || offerName || '',
@@ -355,6 +357,25 @@ function dedupeOffersById(offers) {
   });
 }
 
+// ---------------------------------------------------------------------
+// Category filtering — inferred from a real payload sample: two genuinely
+// mortgage-related offers ("First Time Home Buyer with FHSA", "New Mortgage
+// Touchpoint") shared ssot__OfferProductCategory__dlm.ssot__ProductCategoryId__c
+// = 0ZGHu000000TJEQOA4. This is a REASONABLE INFERENCE FROM A SMALL SAMPLE,
+// not a confirmed mapping from your org — please verify this ID against your
+// actual Product Category records (or the full offer catalog) and correct
+// via the MORTGAGE_PRODUCT_CATEGORY_IDS env var if it's wrong or incomplete
+// (comma-separated if there's more than one).
+// ---------------------------------------------------------------------
+const MORTGAGE_CATEGORY_IDS = (process.env.MORTGAGE_PRODUCT_CATEGORY_IDS || '0ZGHu000000TJEQOA4')
+  .split(',').map(s => s.trim()).filter(Boolean);
+
+// Maps anchorType -> allowed category IDs. Only Mortgages is filtered today;
+// add more entries here if other pages need the same treatment.
+const ANCHOR_CATEGORY_FILTERS = {
+  Mortgages: MORTGAGE_CATEGORY_IDS,
+};
+
 // GET /api/offers?individualId=...&dataspace=...&anchorType=Offers&requestUrl=...
 // Query-param GET wrapper around the same OAuth + Decisioning API call used
 // by /api/personalization/request. Returns pre-normalized offer objects
@@ -369,6 +390,7 @@ app.get('/api/offers', async (req, res) => {
       anchorId,
       anchorType,
       requestUrl,
+      categoryId,
       enableDiagnostics
     } = req.query;
 
@@ -393,7 +415,26 @@ app.get('/api/offers', async (req, res) => {
     };
 
     const result = await callPersonalizationApi(requestBody);
-    const rawItems = (result.personalizations && result.personalizations[0] && result.personalizations[0].data) || [];
+    let rawItems = (result.personalizations && result.personalizations[0] && result.personalizations[0].data) || [];
+
+    // Explicit ?categoryId=... (comma-separated) overrides the anchorType-based
+    // default; otherwise fall back to ANCHOR_CATEGORY_FILTERS[anchorType].
+    const explicitCategoryIds = categoryId ? categoryId.split(',').map(s => s.trim()).filter(Boolean) : null;
+    const filterCategoryIds = explicitCategoryIds || ANCHOR_CATEGORY_FILTERS[anchorType] || null;
+
+    if (filterCategoryIds && filterCategoryIds.length) {
+      rawItems = rawItems.filter(item => {
+        const catId = item.ssot__OfferProductCategory__dlm && item.ssot__OfferProductCategory__dlm.ssot__ProductCategoryId__c;
+        return catId && filterCategoryIds.includes(catId);
+      });
+      // Keep result.personalizations in sync so writeDeliveryEvent (below)
+      // only logs offers actually shown after filtering, not the full
+      // unfiltered set Salesforce originally returned.
+      if (result.personalizations && result.personalizations[0]) {
+        result.personalizations[0].data = rawItems;
+      }
+    }
+
     const offers = dedupeOffersById(rawItems.map(normalizeOfferTreatment).filter(Boolean));
 
     // Log offer views (ChannelDeliveryEvent) — same helper already used by
@@ -500,6 +541,10 @@ app.get('/offerslog', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'offerslog.html'));
 });
 
+app.get('/viewlog', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'viewlog.html'));
+});
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -523,12 +568,32 @@ let ingestAccessToken = null;
 let ingestTokenExpiry = null;
 
 function getIngestAccessToken() {
-  return new Promise((resolve, reject) => {
-    if (DC_INGEST_CONFIG.clientId === PERSONALIZATION_CONFIG.clientId &&
-        DC_INGEST_CONFIG.tokenEndpoint === PERSONALIZATION_CONFIG.tokenEndpoint) {
-      return getValidAccessToken().then(resolve).catch(reject);
-    }
+  // IMPORTANT: the Data Cloud Ingestion API requires a CDP-exchanged token
+  // (the same kind getD360AccessToken() produces for ChannelDeliveryEvent),
+  // NOT a plain Salesforce org access token. When this function's ingest
+  // credentials match the Decisioning API's credentials (the common case —
+  // DC_INGEST_CLIENT_ID/DC_INGEST_TOKEN_ENDPOINT not separately set), reuse
+  // getD360AccessToken() to get a properly-exchanged token, rather than
+  // returning the raw org token via getValidAccessToken(). Sending a plain
+  // org token to the ingest host is very likely why OfferFeedbackEvent
+  // calls were failing with an empty-body HTTP 400 while ChannelDeliveryEvent
+  // (which already used getD360AccessToken()) worked.
+  const usesSameCredentialsAsDecisioningApi =
+    DC_INGEST_CONFIG.clientId === PERSONALIZATION_CONFIG.clientId &&
+    DC_INGEST_CONFIG.tokenEndpoint === PERSONALIZATION_CONFIG.tokenEndpoint;
 
+  if (usesSameCredentialsAsDecisioningApi) {
+    return getD360AccessToken();
+  }
+
+  // NOTE: this branch (distinct DC_INGEST_CLIENT_ID/SECRET configured) does
+  // NOT currently perform the CDP token exchange either — it returns a plain
+  // org token from these separate credentials. If you ever actually set
+  // DC_INGEST_CLIENT_ID to a different connected app, this branch will need
+  // the same two-step exchange added (org token -> POST .../services/a360/token)
+  // before it will work against the Ingestion API. Flagging this now so it's
+  // not a surprise later; not fixed here since it's not your current config.
+  return new Promise((resolve, reject) => {
     if (!DC_INGEST_CONFIG.clientId || !DC_INGEST_CONFIG.clientSecret) {
       reject(new Error('DC_INGEST_CLIENT_ID/SECRET not configured'));
       return;
@@ -602,6 +667,83 @@ function callIngestApi(objectApiName, records) {
         let data = '';
         res.on('data', c => data += c);
         res.on('end', () => {
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            console.error(`callIngestApi(${objectApiName}) failed:`, {
+              statusCode: res.statusCode,
+              headers: res.headers,
+              body: data,
+              requestPath: path_,
+              requestBody: bodyStr
+            });
+          }
+          try {
+            const parsed = data ? JSON.parse(data) : {};
+            if (res.statusCode >= 200 && res.statusCode < 300) resolve(parsed);
+            else reject(new Error(parsed.message || parsed.error_description || data || `HTTP ${res.statusCode} (empty response body — see server log for headers/request details)`));
+          } catch (e) { reject(new Error(data || e.message)); }
+        });
+      });
+      req.on('error', reject);
+      req.write(bodyStr);
+      req.end();
+    }).catch(reject);
+  });
+}
+
+/**
+ * ---------------------------------------------------------------------
+ * Data Cloud Query API (read-only) — separate from the Ingestion API
+ * above, which only writes. Reads use POST {baseUrl}/api/v2/query with
+ * a raw SQL body, authenticated with the same CDP-exchanged token
+ * (getD360AccessToken) used for ingestion.
+ *
+ * REQUIRES: the connected app also needs the "cdp_query_api" OAuth scope
+ * (separate from "cdp_ingest_api", which was added earlier for writes) —
+ * you will very likely see the same "requested scope is not allowed"
+ * error again until that's added too.
+ *
+ * REQUIRES: DC_QUERY_OFFER_FEEDBACK_TABLE must be set to the EXACT DLO/DMO
+ * name for OfferFeedbackEvent as shown in Data Cloud Setup > Data Explorer
+ * (or the Data Streams tab) — Salesforce often truncates/suffixes long
+ * object API names, so this is deliberately left unset by default rather
+ * than guessing at "ActionChannelDelivery_OfferFeed..." plus whatever
+ * suffix (e.g. __dll) your org actually assigned.
+ * ---------------------------------------------------------------------
+ */
+const DC_QUERY_CONFIG = {
+  baseUrl: (process.env.DC_QUERY_BASE_URL || DC_INGEST_CONFIG.baseUrl || '').replace(/\/$/, ''),
+  offerFeedbackTable: process.env.DC_QUERY_OFFER_FEEDBACK_TABLE || ''
+};
+
+function queryDataCloud(sql) {
+  return new Promise((resolve, reject) => {
+    if (!DC_QUERY_CONFIG.baseUrl) {
+      reject(new Error('DC_QUERY_BASE_URL (or DC_INGEST_BASE_URL/PERSONALIZATION_BASE_URL) must be configured'));
+      return;
+    }
+    getD360AccessToken().then((token) => {
+      const url = new URL('/api/v2/query', DC_QUERY_CONFIG.baseUrl);
+      const isHttps = url.protocol === 'https:';
+      const lib = isHttps ? https : http;
+      const bodyStr = JSON.stringify({ sql });
+      const options = {
+        hostname: url.hostname,
+        port: url.port || (isHttps ? 443 : 80),
+        path: url.pathname,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Content-Length': Buffer.byteLength(bodyStr)
+        }
+      };
+      const req = lib.request(options, (res) => {
+        let data = '';
+        res.on('data', c => data += c);
+        res.on('end', () => {
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            console.error('queryDataCloud failed:', { statusCode: res.statusCode, headers: res.headers, body: data, sql });
+          }
           try {
             const parsed = data ? JSON.parse(data) : {};
             if (res.statusCode >= 200 && res.statusCode < 300) resolve(parsed);
@@ -615,6 +757,48 @@ function callIngestApi(objectApiName, records) {
     }).catch(reject);
   });
 }
+
+// Query API V2 returns rows as positional value arrays (e.g. [["a","b"]]),
+// with column names/order given separately in a metadata object keyed by
+// column name, each entry carrying a placeInOrder index. This converts
+// that into plain keyed row objects — { ColumnName: value, ... } — so
+// consumers (like viewlog.html) can just read row.ColumnName directly.
+function queryRowsToObjects(result) {
+  const metadata = result.metadata || {};
+  const columns = Object.keys(metadata).sort(
+    (a, b) => (metadata[a].placeInOrder || 0) - (metadata[b].placeInOrder || 0)
+  );
+  const rawRows = result.data || result.rows || [];
+  return rawRows.map(row => {
+    if (!Array.isArray(row)) return row; // already an object — leave as-is
+    const obj = {};
+    columns.forEach((col, idx) => { obj[col] = row[idx]; });
+    return obj;
+  });
+}
+
+// GET /api/offers/feedback-log — reads back recent OfferFeedbackEvent rows
+// for viewlog.html. Read-only; does not modify anything.
+app.get('/api/offers/feedback-log', async (req, res) => {
+  try {
+    if (!DC_QUERY_CONFIG.offerFeedbackTable) {
+      return res.status(400).json({
+        success: false,
+        error: 'DC_QUERY_OFFER_FEEDBACK_TABLE is not configured. Set it to the exact DLO/DMO name for OfferFeedbackEvent from Data Cloud Setup > Data Explorer.'
+      });
+    }
+    const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
+    // DLO columns get a __c suffix appended to custom/ingested fields (even
+    // though the Ingestion API schema declares them without it) — aliased
+    // back to the plain names here so viewlog.html doesn't need to change.
+    const sql = `SELECT IndividualId__c AS IndividualId, OfferId__c AS OfferId, Feedback__c AS Feedback, FeedbackReason__c AS FeedbackReason, ChannelCode__c AS ChannelCode, FeedbackEventId__c AS FeedbackEventId, PersonalizationDecisionId__c AS PersonalizationDecisionId, FeedbackTimestamp__c AS FeedbackTimestamp FROM ${DC_QUERY_CONFIG.offerFeedbackTable} ORDER BY FeedbackTimestamp__c DESC LIMIT ${limit}`;
+    const result = await queryDataCloud(sql);
+    res.json({ success: true, rows: queryRowsToObjects(result), raw: result });
+  } catch (error) {
+    console.error('GET /api/offers/feedback-log error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // Write a ChannelDeliveryEvent record to Data Cloud after each decision
 const DELIVERY_SOURCE = process.env.DC_DELIVERY_SOURCE_API_NAME || process.env.DC_INGEST_SOURCE_API_NAME || '';
