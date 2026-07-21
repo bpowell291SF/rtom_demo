@@ -67,22 +67,22 @@
   // Messages shown per response value. Keep in sync with FEEDBACK_OPTIONS
   // in /js/rbc-shared.js if you rename or add response types.
   const MESSAGES = {
-    interested: {
+    'Interested': {
       icon: '🎉',
       heading: 'Great — we\u2019ll follow up!',
       message: 'Thanks for your interest. An RBC representative or your online banking will follow up with next steps on this offer.',
     },
-    not_interested: {
+    'Not Interested': {
       icon: '👍',
       heading: 'Thanks for the feedback',
       message: 'We\u2019ve noted that this offer isn\u2019t a fit right now. We\u2019ll use this to show you more relevant offers in the future.',
     },
-    need_more_info: {
+    'Need More Information': {
       icon: '📩',
       heading: 'We\u2019ll send more details',
       message: 'Thanks for asking — we\u2019ll follow up with more information about this offer soon.',
     },
-    maybe_later: {
+    'Maybe Later': {
       icon: '⏰',
       heading: 'No problem — we\u2019ll check back',
       message: 'We\u2019ll leave this offer available for you and check in again later.',
@@ -92,10 +92,9 @@
   const params = new URLSearchParams(window.location.search);
   const response = params.get('response');
   const offerId = params.get('offerId') || '';
-  const contentId = params.get('contentId') || '';
+  const decisionId = params.get('decisionId') || '';
   const individualId = params.get('individualId') || '';
-  const dataspace = params.get('dataspace') || '';
-  const channel = params.get('channel') || '';
+  const channelId = params.get('channelId') || '';
   const offerName = params.get('offerName') || '';
 
   const meta = document.getElementById('confirm-meta');
@@ -121,12 +120,12 @@
       const res = await fetch('/api/offers/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ individualId, dataspace, offerId, contentId, response, channel, offerName })
+        body: JSON.stringify({ individualId, decisionId, offerId, channelId, response, offerName })
       });
       const data = await res.json();
       meta.textContent = data.success
-        ? 'Your response has been recorded.'
-        : 'We couldn\u2019t confirm this was logged, but thanks for your response.';
+        ? 'Your response has been recorded in Salesforce Personalization.'
+        : ('We couldn\u2019t confirm this was logged (' + (data.error || 'unknown error') + '), but thanks for your response.');
     } catch (err) {
       meta.textContent = 'We couldn\u2019t confirm this was logged, but thanks for your response.';
     }
