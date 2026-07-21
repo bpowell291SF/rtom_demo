@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RBC | Offer Feedback Log</title>
+<link rel="stylesheet" href="/css/rbc-theme.css" />
+<style>
+  .log-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem; }
+  .log-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; }
+  .log-header h1 { color: var(--rbc-navy); font-size: 1.375rem; margin: 0; }
+  .log-table-wrap { overflow-x: auto; border: 1px solid var(--slate-200); border-radius: 0.5rem; }
+  table.log-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; background: #fff; }
+  table.log-table th {
+    text-align: left; background: var(--rbc-sky); color: var(--rbc-navy);
+    font-weight: 700; padding: 0.625rem 0.75rem; border-bottom: 1px solid var(--slate-200);
+    white-space: nowrap;
+  }
+  table.log-table td { padding: 0.625rem 0.75rem; border-bottom: 1px solid var(--slate-200); color: var(--slate-700); white-space: nowrap; }
+  table.log-table tr:last-child td { border-bottom: none; }
+  table.log-table tr:hover td { background: #fafafa; }
+  .feedback-pill { display: inline-block; padding: 0.125rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+  .feedback-Interested { background: #dcfce7; color: #166534; }
+  .feedback-NotInterested { background: #fee2e2; color: #991b1b; }
+  .feedback-NeedMoreInformation { background: #fef9c3; color: #854d0e; }
+  .feedback-MaybeLater { background: #e0e7ff; color: #3730a3; }
+  .refresh-btn { width: auto; padding: 0.5rem 1rem; }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="container">
+      <span class="topbar-label">Personal Banking</span>
+      <div class="topbar-links">
+        <a href="#">Find a Branch</a>
+        <a href="#">Contact Us</a>
+        <a href="#">EN | FR</a>
+      </div>
+    </div>
+  </div>
+
+  <header class="navbar">
+    <div class="container">
+      <div class="brand">
+        <img src="https://www.rbcroyalbank.com/dvl/assets/images/logos/rbc-logo-shield.svg" alt="RBC" />
+        <span class="brand-name">RBC</span>
+        <span class="brand-sub">Royal Bank</span>
+      </div>
+      <nav class="nav-links">
+        <a href="/">Home</a>
+        <a href="/offers">Offers</a>
+        <a href="/mortgages">Mortgages</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="log-wrap">
+    <div class="log-header">
+      <h1>Offer Feedback Log</h1>
+      <button id="refresh-btn" class="btn btn-outline refresh-btn">Refresh</button>
+    </div>
+    <p class="offers-meta" id="log-meta">Loading…</p>
+    <div class="log-table-wrap">
+      <table class="log-table" id="log-table">
+        <thead>
+          <tr>
+            <th>Individual</th>
+            <th>Offer</th>
+            <th>Action Taken</th>
+            <th>Reason</th>
+            <th>Channel</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody id="log-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; 2026 Royal Bank of Canada — Prototype demo, not an official RBC product.</p>
+      <div class="footer-links">
+        <a href="#">Legal</a>
+        <a href="#">Privacy &amp; Security</a>
+        <a href="#">Accessibility</a>
+      </div>
+    </div>
+  </footer>
+
+<script>
+  const tbody = document.getElementById('log-tbody');
+  const meta = document.getElementById('log-meta');
+  const refreshBtn = document.getElementById('refresh-btn');
+
+  function feedbackClass(value) {
+    return 'feedback-' + String(value || '').replace(/\s+/g, '');
+  }
+
+  function formatTimestamp(value) {
+    if (!value) return '';
+    const d = new Date(value);
+    return isNaN(d) ? value : d.toLocaleString();
+  }
+
+  async function loadLog() {
+    meta.textContent = 'Loading…';
+    tbody.innerHTML = '';
+    try {
+      const res = await fetch('/api/offers/feedback-log?limit=50');
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Request failed');
+
+      const rows = data.rows || [];
+      if (!rows.length) {
+        meta.textContent = 'No feedback records found.';
+        return;
+      }
+
+      rows.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${row.IndividualId || ''}</td>
+          <td>${row.OfferId || ''}</td>
+          <td><span class="feedback-pill ${feedbackClass(row.Feedback)}">${row.Feedback || ''}</span></td>
+          <td>${row.FeedbackReason || ''}</td>
+          <td>${row.ChannelCode || ''}</td>
+          <td>${formatTimestamp(row.FeedbackTimestamp)}</td>`;
+        tbody.appendChild(tr);
+      });
+      meta.textContent = `${rows.length} record(s)`;
+    } catch (err) {
+      meta.textContent = 'Could not load feedback log: ' + err.message;
+    }
+  }
+
+  refreshBtn.addEventListener('click', loadLog);
+  loadLog();
+</script>
+</body>
+</html>
