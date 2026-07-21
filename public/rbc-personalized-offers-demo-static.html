@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RBC | Offers Picked For You</title>
+<script type="text/javascript" src="https://cdn.c360a.salesforce.com/beacon/c360a/6ac190d2-56d8-4600-8e83-007537e3f2ff/scripts/c360a.min.js"></script> 
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          rbcnavy: '#00274D',
+          rbcblue: '#0059B3',
+          rbcskylight: '#EAF3FB',
+          rbcyellow: '#FFD200',
+        },
+        fontFamily: {
+          sans: ['Helvetica Neue','Arial','sans-serif'],
+        }
+      }
+    }
+  }
+</script>
+<!--
+  NOTE: The two <script> tags above only load the Tailwind CDN utility-CSS
+  engine. They generate stylesheet rules, not page content, and do not
+  touch or re-render the DOM after load. There is no application
+  JavaScript in this file — no render loops, no click handlers, no
+  innerHTML writes. All interactivity (the "View Details" modal) is done
+  with pure CSS using the :target selector, so nothing on this page is
+  competing with Personalization for control of the DOM.
+-->
+<style>
+  html { scroll-behavior: smooth; }
+
+  /* CSS-only modal, no JS: each offer's detail panel is a normal element
+     that becomes visible only when its id matches the URL hash (:target). */
+  .details-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,20,40,0.55);
+    z-index: 50;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .details-overlay:target {
+    display: flex;
+  }
+  .card-lift { transition: transform .2s ease, box-shadow .2s ease; }
+  .card-lift:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -8px rgba(0,39,77,0.25); }
+  @media (prefers-reduced-motion: reduce) {
+    .card-lift { transition: none; }
+  }
+</style>
+</head>
+<body class="bg-white font-sans text-slate-800">
+
+  <!-- Top utility bar -->
+  <div class="bg-rbcnavy text-white text-xs">
+    <div class="max-w-6xl mx-auto px-4 py-1.5 flex justify-between items-center">
+      <span class="hidden sm:inline text-blue-100">Personal Banking</span>
+      <div class="flex items-center gap-4 ml-auto">
+        <a href="#" class="hover:underline text-blue-100">Find a Branch</a>
+        <a href="#" class="hover:underline text-blue-100">Contact Us</a>
+        <a href="#" class="hover:underline text-blue-100">EN | FR</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main nav -->
+  <header class="bg-rbcblue text-white sticky top-0 z-30 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <img src="https://www.rbcroyalbank.com/dvl/assets/images/logos/rbc-logo-shield.svg" alt="RBC" class="h-8 w-auto" />
+        <span class="text-xl font-bold tracking-tight">RBC</span>
+        <span class="hidden md:inline text-blue-100 font-light ml-2 pl-2 border-l border-blue-300/50">Royal Bank</span>
+      </div>
+      <nav class="hidden lg:flex items-center gap-6 text-sm font-medium">
+        <a href="#" class="hover:text-rbcyellow">Accounts</a>
+        <a href="#" class="hover:text-rbcyellow">Credit Cards</a>
+        <a href="#" class="hover:text-rbcyellow">Mortgages</a>
+        <a href="#" class="hover:text-rbcyellow">Investments</a>
+        <a href="#" class="text-rbcyellow font-semibold">Offers</a>
+      </nav>
+      <button class="bg-white text-rbcnavy text-sm font-semibold px-4 py-1.5 rounded hover:bg-blue-50 transition">
+        Sign In
+      </button>
+    </div>
+  </header>
+
+  <!-- Unauthenticated personalization banner -->
+  <div class="bg-rbcskylight border-b border-blue-100">
+    <div class="max-w-6xl mx-auto px-4 py-2.5 flex flex-wrap items-center gap-2 text-sm text-rbcnavy">
+      <svg class="w-4 h-4 text-rbcblue shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>You're browsing as a guest — here are some of our most popular offers right now.
+        <a href="#" class="underline font-semibold hover:text-rbcblue">Sign in</a> to see offers tailored to your accounts.
+      </span>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <section class="bg-gradient-to-b from-rbcnavy to-rbcblue text-white">
+    <div class="max-w-6xl mx-auto px-4 py-12 md:py-16">
+      <p class="text-rbcyellow font-semibold text-sm tracking-wide uppercase mb-2">Offers &amp; Promotions</p>
+      <h1 class="text-3xl md:text-4xl font-bold max-w-2xl leading-tight">Deals picked out for you, this week.</h1>
+      <p class="mt-3 text-blue-100 max-w-xl">Explore a few of our current offers on banking, credit cards, and mortgages — apply online in minutes.</p>
+    </div>
+  </section>
+
+  <!--
+    OFFERS GRID — PERSONALIZATION TARGET
+    Stable, static ID: #offers-grid
+    This is plain, pre-rendered HTML. No script writes to this container.
+    Web Personalization Manager / your SDK can replace this element's
+    inner content directly (or the whole node) without racing against
+    any page JavaScript.
+  -->
+  <section class="max-w-6xl mx-auto px-4 py-10 md:py-14">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-xl md:text-2xl font-bold text-rbcnavy">Featured for you</h2>
+      <span class="text-xs text-slate-500 hidden sm:inline">Showing 3 of many offers</span>
+    </div>
+
+    <div id="offers-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+      <!-- Offer 1 -->
+      <div class="card-lift bg-white border border-slate-200 rounded-lg overflow-hidden flex flex-col">
+        <div class="h-32 bg-rbcskylight flex items-center justify-center text-5xl">🏦</div>
+        <div class="p-5 flex flex-col flex-1">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-[11px] font-bold uppercase tracking-wide bg-rbcyellow text-rbcnavy px-2 py-0.5 rounded">Limited Time</span>
+            <span class="text-[11px] text-slate-500 uppercase tracking-wide">Bank Accounts</span>
+          </div>
+          <h3 class="font-bold text-rbcnavy text-base leading-snug mb-1">Open a Chequing Account, Get a New iPad</h3>
+          <p class="text-sm text-slate-600 mb-4 flex-1">Open an eligible RBC chequing account and set up a qualifying direct deposit to receive a new iPad, on us.</p>
+          <a href="#offer-chequing-ipad" class="mt-auto w-full text-center bg-rbcblue text-white text-sm font-semibold py-2.5 rounded hover:bg-rbcnavy transition">View Details</a>
+        </div>
+      </div>
+
+      <!-- Offer 2 -->
+      <div class="card-lift bg-white border border-slate-200 rounded-lg overflow-hidden flex flex-col">
+        <div class="h-32 bg-rbcskylight flex items-center justify-center text-5xl">💳</div>
+        <div class="p-5 flex flex-col flex-1">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-[11px] font-bold uppercase tracking-wide bg-rbcyellow text-rbcnavy px-2 py-0.5 rounded">Popular</span>
+            <span class="text-[11px] text-slate-500 uppercase tracking-wide">Credit Cards</span>
+          </div>
+          <h3 class="font-bold text-rbcnavy text-base leading-snug mb-1">RBC Avion Visa Infinite — Welcome Bonus Points</h3>
+          <p class="text-sm text-slate-600 mb-4 flex-1">Apply and get approved for the Avion Visa Infinite card, then earn bonus Avion points after your first purchase within 90 days.</p>
+          <a href="#offer-avion-welcome" class="mt-auto w-full text-center bg-rbcblue text-white text-sm font-semibold py-2.5 rounded hover:bg-rbcnavy transition">View Details</a>
+        </div>
+      </div>
+
+      <!-- Offer 3 -->
+      <div class="card-lift bg-white border border-slate-200 rounded-lg overflow-hidden flex flex-col">
+        <div class="h-32 bg-rbcskylight flex items-center justify-center text-5xl">🏠</div>
+        <div class="p-5 flex flex-col flex-1">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-[11px] font-bold uppercase tracking-wide bg-rbcyellow text-rbcnavy px-2 py-0.5 rounded">Limited Time</span>
+            <span class="text-[11px] text-slate-500 uppercase tracking-wide">Mortgages</span>
+          </div>
+          <h3 class="font-bold text-rbcnavy text-base leading-snug mb-1">Get Up to $5,900 in Value with an Eligible Mortgage</h3>
+          <p class="text-sm text-slate-600 mb-4 flex-1">Take out or switch an eligible RBC mortgage and access a bundle of value, including rate discounts, cash back, and account credits.</p>
+          <a href="#offer-mortgage-value" class="mt-auto w-full text-center bg-rbcblue text-white text-sm font-semibold py-2.5 rounded hover:bg-rbcnavy transition">View Details</a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Help footer strip -->
+  <section class="bg-rbcskylight">
+    <div class="max-w-6xl mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div>
+        <h3 class="font-bold text-rbcnavy">Need help choosing?</h3>
+        <p class="text-sm text-slate-600">Book a free chat with an RBC advisor, available 24/7.</p>
+      </div>
+      <button class="bg-rbcblue text-white text-sm font-semibold px-5 py-2.5 rounded hover:bg-rbcnavy transition">Book an Appointment</button>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-rbcnavy text-blue-200 text-xs">
+    <div class="max-w-6xl mx-auto px-4 py-6 flex flex-col sm:flex-row justify-between gap-3">
+      <p>&copy; 2026 Royal Bank of Canada — Prototype demo, not an official RBC product.</p>
+      <div class="flex gap-4">
+        <a href="#" class="hover:underline">Legal</a>
+        <a href="#" class="hover:underline">Privacy &amp; Security</a>
+        <a href="#" class="hover:underline">Accessibility</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===================== CSS-only detail overlays ===================== -->
+  <!-- Each overlay is plain markup, shown only when its id matches the URL
+       hash (:target). "View Details" links to the id; "Maybe Later"/"X"
+       link to "#" (an empty hash) which un-targets it, hiding it again. -->
+
+  <div id="offer-chequing-ipad" class="details-overlay">
+    <div class="bg-white rounded-lg shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+      <div class="bg-rbcnavy text-white px-6 py-5 flex items-start justify-between rounded-t-lg">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wide bg-rbcyellow text-rbcnavy px-2 py-0.5 rounded">Limited Time</span>
+          <h3 class="text-lg font-bold mt-2 leading-snug">Open a Chequing Account, Get a New iPad</h3>
+          <p class="text-blue-100 text-sm mt-1">Eligible new RBC chequing clients</p>
+        </div>
+        <a href="#" aria-label="Close" class="text-blue-100 hover:text-white text-2xl leading-none px-1">&times;</a>
+      </div>
+      <div class="p-6">
+        <p class="text-slate-700 mb-4">Open an eligible RBC chequing account and set up a qualifying direct deposit to receive a new iPad, on us.</p>
+        <h4 class="font-semibold text-rbcnavy text-sm uppercase tracking-wide mb-2">How it works</h4>
+        <ul class="space-y-2 mb-5 text-sm text-slate-700">
+          <li class="flex gap-2"><span class="text-rbcblue mt-0.5">&#10003;</span><span>Available to new RBC personal banking clients who open an eligible chequing account.</span></li>
+          <li class="flex gap-2"><span class="text-rbcblue mt-0.5">&#10003;</span><span>Set up a recurring direct deposit (payroll, pension, or government benefit) within the offer period.</span></li>
+          <li class="flex gap-2"><span class="text-rbcblue mt-0.5">&#10003;</span><span>Complete a minimum number of debit transactions each month to stay eligible.</span></li>
+          <li class="flex gap-2"><span class="text-rbcblue mt-0.5">&#10003;</span><span>Reward is fulfilled after all account and activity conditions are met and verified.</span></li>
+        </ul>
+        <div class="bg-rbcskylight border border-blue-100 rounded p-3 mb-5">
+          <p class="text-xs text-slate-600">Offer available for a limited time and subject to change or withdrawal without notice. Full terms, eligible accounts, and reward fulfillment timelines apply.</p>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <a href="#" class="flex-1 text-center bg-rbcblue text-white font-semibold py-2.5 rounded hover:bg-rbcnavy transition">View Chequing Accounts</a>
+          <a href="#" class="flex-1 text-center border border-slate-300 text-slate-700 font-semibold py-2.5 rounded hover:bg-slate-50 transition">Maybe Later</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="offer-avion-welcome" class="details-overlay">
+    <div class="bg-white rounded-lg shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+      <div class="bg-rbcnavy text-white px-6 py-5 flex items-start justify-between rounded-t-lg">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wide bg-rbcyellow text-rbcnavy px-2 py-0.5 rounded">Popular</span>
+          <h3 class="text-lg font-bold mt-2 leading-snug">RBC Avion Visa Infinite — Welcome Bonus Points</h3>
+          <p class="text-blue-100 text-sm mt-1">New Avion Visa Infinite cardholders</p>
+        </div>
+        <a href="#" aria-label="Close" class="text-blue-100 hover:text-white text-2xl leading-none px-1">&times;</a>
+      </div>
+      <div class="p-6">
+        <p class="text-slate-700 mb-4">Apply and get approved for the Avion Visa Infinite card, then earn bonus Avion points after your first purchase within 90 days.</p>
+        <h4 class="font-semibold text-rbcnavy text-sm uppercase tracking-wide mb-2">How it works</h4>
+        <ul class="space-y-2 mb-5 text-sm text-slate-700">
+          <li class="flex gap-2"><span class="text-rbcblue mt-0.5">&#10003;</span><span>Welcome bonus points are credited after your first eligible purchase is posted to the new account.</span></li>
+          <li class="flex gap-2"><span class="text-rbcblue mt-0.5">&#10003;</span><span>Earn points on every dollar spent, with bonus categories on travel and dining.</span></li>
+          <li class="flex gap-2"><span class="text-rbcblue mt-0.5">&#10003;</span><span>First-year annual fee may be waived for new cardholders as part of the offer.</span></li>
+          <li class="flex gap-2"><span class="text-rbcblue mt-0.5">&#10003;</span><span>Includes travel medical insurance and airport lounge access, subject to plan terms.</span></li>
+        </ul>
+        <div class="bg-rbcskylight border border-blue-100 rounded p-3 mb-5">
+          <p class="text-xs text-slate-600">Approval subject to credit qualification. Bonus points, fee waivers, and insurance coverage are subject to the cardholder agreement and offer terms in effect at the time of application.</p>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <a href="#" class="flex-1 text-center bg-rbcblue text-white font-semibold py-2.5 rounded hover:bg-rbcnavy transition">Explore Avion Visa Infinite</a>
+          <a href="#" class="flex-1 text-center border border-slate-300 text-slate-700 font-semibold py-2.5 rounded hover:bg-slate-50 transition">Maybe Later</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="offer-mortgage-value" class="details-overlay">
+    <div class="bg-white rounded-lg shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+      <div class="bg-rbcnavy text-white px-6 py-5 flex items-start justify-between rounded-t-lg">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wide bg-rbcyellow text-rbcnavy px-2 py-0.5 rounded">Limited Time</span>
+          <h3 class="text-lg font-bold mt-2 leading-snug">Get Up to $5,900 in Value with an Eligible Mortgage</h3>
+          <p class="text-blue-100 text-sm mt-1">New and switching mortgage clients</p>
+        </div>
+        <a href="#" aria-label="Close" class="text-blue-100 hover:text-white text-2xl leading-none px-1">&times;</a>
+      </div>
+      <div class="p-6">
+        <p class="text-slate-700 mb-4">Take out or switch an eligible RBC mortgage and access a bundle of value, including rate discounts, cash back, and account credits.</p>
+        <h4 class="font-semibold text-rbcnavy text-sm uppercase tracking-wide mb-2">How it works</h4>
+        <ul class="space-y-2 mb-5 text-sm text-slate-700">
+          <li class="flex gap-2"><span class="text-rbcblue mt-0.5">&#10003;</span><span>Combined value may include a mortgage rate discount, a cash-back amount, and fee credits.</span></li>
+          <li class="flex gap-2"><span class="text-rbcblue mt-0.5">&#10003;</span><span>Available on new purchase mortgages and mortgages switched to RBC from another lender.</span></li>
+          <li class="flex gap-2"><span class="text-rbcblue mt-0.5">&#10003;</span><span>A minimum mortgage amount and term length may apply to qualify for full value.</span></li>
+          <li class="flex gap-2"><span class="text-rbcblue mt-0.5">&#10003;</span><span>Speak with a mortgage specialist to confirm which components apply to your situation.</span></li>
+        </ul>
+        <div class="bg-rbcskylight border border-blue-100 rounded p-3 mb-5">
+          <p class="text-xs text-slate-600">Value amount is an estimate based on eligible products and may vary by mortgage amount, term, and province. Offer subject to change and standard lending criteria apply.</p>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <a href="#" class="flex-1 text-center bg-rbcblue text-white font-semibold py-2.5 rounded hover:bg-rbcnavy transition">Talk to a Mortgage Specialist</a>
+          <a href="#" class="flex-1 text-center border border-slate-300 text-slate-700 font-semibold py-2.5 rounded hover:bg-slate-50 transition">Maybe Later</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
