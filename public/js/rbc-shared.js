@@ -88,7 +88,8 @@ async function fetchOffers({ anchorType, anchorId, requestUrl } = {}) {
   const res = await fetch('/api/offers?' + params.toString());
   const data = await res.json();
   if (!data.success) throw new Error(data.error || 'Request failed');
-  return { offers: data.offers || [], requestId: data.requestId, raw: data.raw, anonymous: false };
+  const offers = (data.offers || []).map(o => ({ ...o, decisionId: data.requestId }));
+  return { offers, requestId: data.requestId, raw: data.raw, anonymous: false };
 }
 
 // ---------------------------------------------------------------------
@@ -200,16 +201,16 @@ function renderOfferCards(containerEl, offers) {
 }
 
 // ---------------------------------------------------------------------
-// Offer feedback — 4 responses, logged server-side (POST /api/offers/feedback),
-// then the customer lands on offerslog.html?response=... which shows a
-// confirmation message. Link-based (not AJAX-only) so this also works from
-// a static channel like email, where there's no JS to run.
+// Offer feedback — 4 responses, logged server-side via the real Ingestion
+// API (POST /api/offers/feedback → writeFeedbackEvent → OfferFeedbackEvent).
+// Link-based (not AJAX-only) so this also works from a static channel like
+// email, where there's no JS to run.
 // ---------------------------------------------------------------------
 const FEEDBACK_OPTIONS = [
-  { value: 'interested',      label: 'Interested' },
-  { value: 'not_interested',  label: 'Not Interested' },
-  { value: 'need_more_info',  label: 'Need More Information' },
-  { value: 'maybe_later',     label: 'Maybe Later' },
+  { value: 'Interested',               label: 'Interested' },
+  { value: 'Not Interested',           label: 'Not Interested' },
+  { value: 'Need More Information',    label: 'Need More Information' },
+  { value: 'Maybe Later',              label: 'Maybe Later' },
 ];
 
 function buildOfferLogUrl(offer, responseValue, channel) {
@@ -218,16 +219,19 @@ function buildOfferLogUrl(offer, responseValue, channel) {
   const params = new URLSearchParams({
     response: responseValue,
     offerId: offer.id || '',
-    contentId: offer.contentId || '',
+    decisionId: offer.decisionId || '',
     individualId: state.signedIn ? persona.customerId : '',
-    dataspace: RBC_CONFIG.dataspace,
-    channel: channel || 'unknown',
+    channelId: channel || 'unknown',
     offerName: offer.heading || offer.name || '',
   });
   return '/offerslog.html?' + params.toString();
 }
 
-
+// ---------------------------------------------------------------------
+// Quick-view modal — shows the real fields, then links out to the real
+// ssot__CallToActionUrl__c (does not fabricate details/disclaimers,
+// since the real API doesn't provide those fields).
+// ---------------------------------------------------------------------
 function ensureModalMounted() {
   if (document.getElementById('rbc-modal-backdrop')) return;
   const div = document.createElement('div');
