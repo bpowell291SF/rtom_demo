@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RBC | Offers Picked For You</title>
+
+<!--
+  Interactions SDK / beacon — required for WPM to publish onto this page.
+  This is the ONLY <script> on the page. Everything else below is plain,
+  static HTML with real values already baked in — no JS renders or
+  populates anything. This is deliberate: WPM's Experience Template
+  replaces the whole #offers-grid block wholesale (confirmed via testing
+  earlier in this project), not individual elements within it, so there's
+  nothing for app-level JS to usefully do here anymore — and no JS-driven
+  state that WPM's replacement could conflict with or lose.
+-->
+<script type="text/javascript" src="https://cdn.c360a.salesforce.com/beacon/c360a/6ac190d2-56d8-4600-8e83-007537e3f2ff/scripts/c360a.min.js"></script>
+
+<link rel="stylesheet" href="/css/rbc-theme.css" />
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="container">
+      <span class="topbar-label">Personal Banking</span>
+      <div class="topbar-links">
+        <a href="#">Find a Branch</a>
+        <a href="#">Contact Us</a>
+        <a href="#">EN | FR</a>
+      </div>
+    </div>
+  </div>
+
+  <header class="navbar">
+    <div class="container">
+      <div class="brand">
+        <img src="https://www.rbcroyalbank.com/dvl/assets/images/logos/rbc-logo-shield.svg" alt="RBC" />
+        <span class="brand-name">RBC</span>
+        <span class="brand-sub">Royal Bank</span>
+      </div>
+      <nav class="nav-links">
+        <a href="/">Home</a>
+        <a href="/offers">Offers</a>
+        <a href="/mortgages">Mortgages</a>
+        <a href="/offers-wpm-modal-feedback">WPM Variant 2 (Modal)</a>
+      </nav>
+      <button class="signin-btn">Sign In</button>
+    </div>
+  </header>
+
+  <div class="banner">
+    <div class="container">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>You're browsing as a guest — sign in to see offers tailored to your accounts.</span>
+    </div>
+  </div>
+
+  <section class="hero">
+    <div class="container">
+      <p class="hero-eyebrow">Offers &amp; Promotions</p>
+      <h1>Deals picked out for you, this week.</h1>
+      <p>Explore current offers on banking, credit cards, and mortgages — apply online in minutes.</p>
+    </div>
+  </section>
+
+  <!--
+    OFFERS GRID — PERSONALIZATION TARGET
+    Whatever real content sits here is a working fallback, shown as-is if
+    WPM/the Personalization Point hasn't taken over the page (or is
+    unavailable) — every CTA below is a real, working RBC URL, not a
+    placeholder. Once live, WPM's Experience Template replaces the entire
+    contents of #offers-grid with its own rendered cards.
+
+    ids on the heading/image/body/CTA elements (offer1-*, offer2-*, offer3-*)
+    are kept only as a manual-editing convenience if you ever want to target
+    individual elements by hand in WPM — nothing on this page depends on
+    them, and there is no JS reading or requiring them.
+  -->
+  <section class="container offers-section">
+    <div class="offers-heading-row">
+      <h2>Featured for you</h2>
+    </div>
+
+    <div id="offers-grid">
+
+      <!-- Offer 1: RRSP Acquisition (real Offer Id 1XhHu000000Xa27KAC) -->
+      <div class="offer-card">
+        <div class="offer-card-image">
+          <img id="offer1-image" src="https://www.rbcroyalbank.com/investments/_assets-custom/images/banner/RRSP-Image.jpg" alt="Save for retirement with an RRSP" />
+        </div>
+        <div class="offer-card-body">
+          <h3 id="offer1-heading">Save for retirement with an RRSP</h3>
+          <p class="offer-card-summary" id="offer1-body">Open a Registered Retirement Savings Plan and start building your retirement savings today.</p>
+          <a id="offer1-cta" href="https://www.rbcroyalbank.com/investments/rrsp.html" class="btn btn-primary">Open an RRSP today</a>
+        </div>
+      </div>
+
+      <!-- Offer 2: TFSA Acquisition (real Offer Id 1XhHu000000Xa22KAC) -->
+      <div class="offer-card">
+        <div class="offer-card-image">
+          <img id="offer2-image" src="https://www.rbcroyalbank.com/investments/_assets-custom/images/tfsa-2020-banner.jpg" alt="Grow your savings tax-free with a TFSA" />
+        </div>
+        <div class="offer-card-body">
+          <h3 id="offer2-heading">Grow your savings tax-free with a TFSA</h3>
+          <p class="offer-card-summary" id="offer2-body">Open a Tax-Free Savings Account and start growing your money without paying tax on the growth.</p>
+          <a id="offer2-cta" href="https://www.rbcroyalbank.com/investments/tfsa.html" class="btn btn-primary">Open a TFSA today</a>
+        </div>
+      </div>
+
+      <!-- Offer 3: First Time Home Buyer with FHSA (real Offer Id 1XhHu000000Xa1xKAC) -->
+      <div class="offer-card">
+        <div class="offer-card-image">
+          <img id="offer3-image" src="https://www.rbcroyalbank.com/mortgages/_assets-custom/images/fthb-steps/2.jpg" alt="Start your homeownership journey with an FHSA" />
+        </div>
+        <div class="offer-card-body">
+          <h3 id="offer3-heading">Start your homeownership journey with an FHSA</h3>
+          <p class="offer-card-summary" id="offer3-body">Combine the First Home Savings Account with a new mortgage and take the next step toward owning your first home.</p>
+          <a id="offer3-cta" href="https://www.rbcroyalbank.com/mortgages/first-time-home-buyers.html" class="btn btn-primary">Learn about the FHSA + Mortgage bundle</a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="help-strip">
+    <div class="container">
+      <div>
+        <h3>Need help choosing?</h3>
+        <p>Book a free chat with an RBC advisor, available 24/7.</p>
+      </div>
+      <button class="btn btn-primary" style="width:auto;">Book an Appointment</button>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; 2026 Royal Bank of Canada — Prototype demo, not an official RBC product.</p>
+      <div class="footer-links">
+        <a href="#">Legal</a>
+        <a href="#">Privacy &amp; Security</a>
+        <a href="#">Accessibility</a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
