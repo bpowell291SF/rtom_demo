@@ -6,19 +6,28 @@
 <title>RBC | Offer Feedback Log</title>
 <link rel="stylesheet" href="/css/rbc-theme.css" />
 <style>
-  .log-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem; }
+  .log-wrap { max-width: 1400px; margin: 0 auto; padding: 2rem 1rem; }
   .log-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; }
   .log-header h1 { color: var(--rbc-navy); font-size: 1.375rem; margin: 0; }
   .log-table-wrap { overflow-x: auto; border: 1px solid var(--slate-200); border-radius: 0.5rem; }
-  table.log-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; background: #fff; }
+  table.log-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; background: #fff; table-layout: fixed; }
   table.log-table th {
     text-align: left; background: var(--rbc-sky); color: var(--rbc-navy);
     font-weight: 700; padding: 0.625rem 0.75rem; border-bottom: 1px solid var(--slate-200);
     white-space: nowrap;
   }
-  table.log-table td { padding: 0.625rem 0.75rem; border-bottom: 1px solid var(--slate-200); color: var(--slate-700); white-space: nowrap; }
+  table.log-table td { padding: 0.625rem 0.75rem; border-bottom: 1px solid var(--slate-200); color: var(--slate-700); word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; min-width: 0; overflow: hidden; }
   table.log-table tr:last-child td { border-bottom: none; }
   table.log-table tr:hover td { background: #fafafa; }
+  /* Give the two long-text columns (Individual, Offer) more room than the
+     short ones (Action Taken, Channel, Timestamp) — table-layout: fixed
+     above makes these column widths actually take effect. */
+  table.log-table th:nth-child(1), table.log-table td:nth-child(1) { width: 16%; }
+  table.log-table th:nth-child(2), table.log-table td:nth-child(2) { width: 26%; }
+  table.log-table th:nth-child(3), table.log-table td:nth-child(3) { width: 13%; }
+  table.log-table th:nth-child(4), table.log-table td:nth-child(4) { width: 20%; }
+  table.log-table th:nth-child(5), table.log-table td:nth-child(5) { width: 10%; }
+  table.log-table th:nth-child(6), table.log-table td:nth-child(6) { width: 15%; white-space: nowrap; }
   .feedback-pill { display: inline-block; padding: 0.125rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
   .feedback-Interested { background: #dcfce7; color: #166534; }
   .feedback-NotInterested { background: #fee2e2; color: #991b1b; }
