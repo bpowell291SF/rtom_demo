@@ -29,6 +29,19 @@ const PERSONAS = [
   { id: 'persona-5', name: 'Kevin Webb',        customerId: 'MDM-RBC-0000005392', segment: 'Student' },
 ];
 
+// PARTIAL list — only the 5 offers confirmed so far (seen paired with their
+// real Salesforce Offer Id in actual WPM/Decisioning API output earlier in
+// this project). Add the rest here once you have the full Offer catalog;
+// anything not in this map just falls back to showing the raw OfferId
+// (see offerDisplayName() below), so it's safe to extend incrementally.
+const OFFERS = {
+  '1XhHu000000Xa43KAC': 'Get more from your everyday spending',   // Retail Card TPA
+  '1XhHu000000Xa27KAC': 'Save for retirement with an RRSP',       // RRSP Acquisition
+  '1XhHu000000Xa22KAC': 'Grow your savings tax-free with a TFSA', // TFSA Acquisition
+  '1XhHu000000Xa1xKAC': 'Start your homeownership journey with an FHSA', // First Time Home Buyer with FHSA
+  '1XhHu000000Xa4IKAS': 'Sending money internationally? We can help',   // International Money Transfer Trigger
+};
+
 // ---------------------------------------------------------------------
 // Session state (persists across index.html / offers.html / mortgages.html
 // navigations within the same browser tab — this is a real multi-page
@@ -53,6 +66,14 @@ function setState(partial) {
 function currentPersona() {
   const state = getState();
   return PERSONAS.find(p => p.id === state.personaId) || PERSONAS[0];
+}
+
+// Looks up the offer name for a given Offer Id from the OFFERS map above.
+// Falls back to showing the raw offerId if it's not in the (currently
+// partial) list.
+function offerDisplayName(offerId) {
+  if (!offerId) return '';
+  return OFFERS[offerId] || offerId;
 }
 
 // ---------------------------------------------------------------------
