@@ -89,6 +89,7 @@
     </div>
   </footer>
 
+  <script src="/js/rbc-shared.js"></script>
 <script>
   const tbody = document.getElementById('log-tbody');
   const meta = document.getElementById('log-meta');
@@ -102,6 +103,16 @@
     if (!value) return '';
     const d = new Date(value);
     return isNaN(d) ? value : d.toLocaleString();
+  }
+
+  // Looks up the persona name for a given customerId using the same
+  // PERSONAS list defined in rbc-shared.js. Falls back to showing the raw
+  // IndividualId if it doesn't match one of the 5 demo personas (e.g. a
+  // real/unknown individual, or the id format changes later).
+  function individualDisplayName(individualId) {
+    if (!individualId) return '';
+    const persona = PERSONAS.find(p => p.customerId === individualId);
+    return persona ? persona.name : individualId;
   }
 
   async function loadLog() {
@@ -121,8 +132,8 @@
       rows.forEach(row => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${row.IndividualId || ''}</td>
-          <td>${row.OfferId || ''}</td>
+          <td>${individualDisplayName(row.IndividualId)}</td>
+          <td>${offerDisplayName(row.OfferId)}</td>
           <td><span class="feedback-pill ${feedbackClass(row.Feedback)}">${row.Feedback || ''}</span></td>
           <td>${row.FeedbackReason || ''}</td>
           <td>${row.ChannelCode || ''}</td>
