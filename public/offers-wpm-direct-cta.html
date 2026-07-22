@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RBC | Offers Picked For You (Direct Link Variant)</title>
+
+<!-- Interactions SDK / beacon — required for WPM to publish onto this page -->
+<script type="text/javascript" src="https://cdn.c360a.salesforce.com/beacon/c360a/6ac190d2-56d8-4600-8e83-007537e3f2ff/scripts/c360a.min.js"></script>
+
+<!--
+  Uses the same static rbc-theme.css stylesheet as offers.html,
+  mortgages.html, and offers-wpm-modal-feedback.html — NOT Tailwind's
+  Play CDN (cdn.tailwindcss.com), which this page used previously.
+
+  WHY THIS CHANGED: Tailwind's Play CDN generates CSS at runtime by
+  watching the page with a MutationObserver and only creates a class's
+  rules once it notices that class appear in the DOM. When WPM's
+  Experience Template injects its rendered markup, that injection didn't
+  reliably trigger the observer — so real, correctly-named classes (e.g.
+  bg-rbcblue, rounded) were present in the HTML but had no matching CSS
+  rule, which is why the CTA button rendered as unstyled plain text even
+  though the markup itself was correct. A real stylesheet loaded via
+  <link> doesn't have this problem: the rule exists unconditionally the
+  moment the page loads, regardless of what injects the class later.
+-->
+<link rel="stylesheet" href="/css/rbc-theme.css" />
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="container">
+      <span class="topbar-label">Personal Banking</span>
+      <div class="topbar-links">
+        <a href="#">Find a Branch</a>
+        <a href="#">Contact Us</a>
+        <a href="#">EN | FR</a>
+      </div>
+    </div>
+  </div>
+
+  <header class="navbar">
+    <div class="container">
+      <div class="brand">
+        <img src="https://www.rbcroyalbank.com/dvl/assets/images/logos/rbc-logo-shield.svg" alt="RBC" />
+        <span class="brand-name">RBC</span>
+        <span class="brand-sub">Royal Bank</span>
+      </div>
+      <nav class="nav-links">
+        <a href="/">Home</a>
+        <a href="/offers">Offers</a>
+        <a href="/mortgages">Mortgages</a>
+        <a href="/offers-wpm-modal-feedback">WPM Variant 2 (Modal)</a>
+      </nav>
+      <button class="signin-btn">Sign In</button>
+    </div>
+  </header>
+
+  <div class="banner">
+    <div class="container">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>You're browsing as a guest — sign in to see offers tailored to your accounts.</span>
+    </div>
+  </div>
+
+  <section class="hero">
+    <div class="container">
+      <p class="hero-eyebrow">Offers &amp; Promotions</p>
+      <h1>Deals picked out for you, this week.</h1>
+      <p>Explore current offers on banking, credit cards, and mortgages — apply online in minutes.</p>
+    </div>
+  </section>
+
+  <!--
+    OFFERS GRID — PERSONALIZATION TARGET
+    Each offer below exposes exactly 5 individually-targetable elements —
+    NOT one swappable HTML block. This matters: WPM's manual element editor
+    (and most Personalization Point setups) work by editing a specific
+    existing element's text/src/href in place. Targeting a whole card's
+    innerHTML previously caused the HTML-escaping issue documented earlier
+    in this project; targeting these 5 plain elements individually avoids
+    that entirely, since nothing here ever needs to inject markup — only
+    plain text or a URL into an attribute.
+
+    For Offer 1, the 5 targetable elements are:
+      #offer1-heading   -> Offer Heading      (text content)
+      #offer1-image     -> Image URL          (src attribute)
+      #offer1-body      -> Offer Body         (text content)
+      #offer1-cta       -> Call to Action     (text content = button caption,
+                                                href attribute = CTA URL)
+    Offer 2 / Offer 3 follow the same pattern with offer2-*/offer3-* ids.
+    Your Experience Template may render its own ids per iteration (e.g.
+    offer-{{@index}}-*) instead — that's fine; nothing on this page
+    depends on the exact id values, only on the offer-cta-btn class below.
+
+    Default values below are placeholders, populated by the small script at
+    the bottom of this file — replaced by WPM/the Personalization Point
+    once it's live on this page.
+  -->
+  <section class="container offers-section">
+    <div class="offers-heading-row">
+      <h2>Featured for you</h2>
+    </div>
+
+    <div id="offers-grid">
+
+      <!-- Offer 1 -->
+      <div class="offer-card">
+        <div class="offer-card-image"><img id="offer1-image" src="" alt="" /></div>
+        <div class="offer-card-body">
+          <h3 id="offer1-heading"></h3>
+          <p class="offer-card-summary" id="offer1-body"></p>
+          <a id="offer1-cta" href="#" class="btn btn-primary offer-cta-btn"></a>
+        </div>
+      </div>
+
+      <!-- Offer 2 -->
+      <div class="offer-card">
+        <div class="offer-card-image"><img id="offer2-image" src="" alt="" /></div>
+        <div class="offer-card-body">
+          <h3 id="offer2-heading"></h3>
+          <p class="offer-card-summary" id="offer2-body"></p>
+          <a id="offer2-cta" href="#" class="btn btn-primary offer-cta-btn"></a>
+        </div>
+      </div>
+
+      <!-- Offer 3 -->
+      <div class="offer-card">
+        <div class="offer-card-image"><img id="offer3-image" src="" alt="" /></div>
+        <div class="offer-card-body">
+          <h3 id="offer3-heading"></h3>
+          <p class="offer-card-summary" id="offer3-body"></p>
+          <a id="offer3-cta" href="#" class="btn btn-primary offer-cta-btn"></a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="help-strip">
+    <div class="container">
+      <div>
+        <h3>Need help choosing?</h3>
+        <p>Book a free chat with an RBC advisor, available 24/7.</p>
+      </div>
+      <button class="btn btn-primary" style="width:auto;">Book an Appointment</button>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; 2026 Royal Bank of Canada — Prototype demo, not an official RBC product.</p>
+      <div class="footer-links">
+        <a href="#">Legal</a>
+        <a href="#">Privacy &amp; Security</a>
+        <a href="#">Accessibility</a>
+      </div>
+    </div>
+  </footer>
+
+<script>
+  // =====================================================================
+  // Default/placeholder offer content — loaded via JavaScript into the
+  // 5 elements per offer described above. This is intentionally simple:
+  // no innerHTML writes, no re-rendering loop — just five direct
+  // textContent/src/href assignments per offer, run once on page load.
+  //
+  // Once WPM / a Personalization Point is wired up to this page, it can
+  // target and override any of these 5 elements per offer directly and
+  // independently — this script only supplies the starting/fallback state.
+  // =====================================================================
+  const DEFAULT_OFFERS = [
+    {
+      slot: 'offer1',
+      heading: 'Open a Chequing Account, Get a New iPad',
+      imageUrl: 'https://www.rbcroyalbank.com/mortgages/_assets-custom/images/fthb-steps/2.jpg',
+      body: 'Open an eligible RBC chequing account and set up a qualifying direct deposit to receive a new iPad, on us.',
+      ctaText: 'View Chequing Accounts',
+      ctaUrl: 'https://www.rbcroyalbank.com/bank-accounts/index.html'
+    },
+    {
+      slot: 'offer2',
+      heading: 'RBC Avion Visa Infinite — Welcome Bonus Points',
+      imageUrl: 'https://www.rbcroyalbank.com/investments/_assets-custom/images/tfsa-2020-banner.jpg',
+      body: 'Apply and get approved for the Avion Visa Infinite card, then earn bonus Avion points after your first purchase within 90 days.',
+      ctaText: 'Explore Avion Visa Infinite',
+      ctaUrl: 'https://www.rbcroyalbank.com/credit-cards/travel/avion-visa-infinite.html'
+    },
+    {
+      slot: 'offer3',
+      heading: 'Get Up to $5,900 in Value with an Eligible Mortgage',
+      imageUrl: 'https://www.rbcroyalbank.com/mortgages/_assets-custom/images/fthb-steps/2.jpg',
+      body: 'Take out or switch an eligible RBC mortgage and access a bundle of value, including rate discounts, cash back, and account credits.',
+      ctaText: 'Talk to a Mortgage Specialist',
+      ctaUrl: 'https://www.rbcroyalbank.com/mortgages/index.html'
+    }
+  ];
+
+  function renderDefaultOffer(offer) {
+    const heading = document.getElementById(offer.slot + '-heading');
+    const image = document.getElementById(offer.slot + '-image');
+    const body = document.getElementById(offer.slot + '-body');
+    const cta = document.getElementById(offer.slot + '-cta');
+
+    if (heading) heading.textContent = offer.heading;
+    if (image) { image.src = offer.imageUrl; image.alt = offer.heading; }
+    if (body) body.textContent = offer.body;
+    if (cta) { cta.textContent = offer.ctaText; cta.href = offer.ctaUrl; }
+  }
+
+  DEFAULT_OFFERS.forEach(renderDefaultOffer);
+
+  // -------------------------------------------------------------------
+  // Defensive fix, NOT a behavior change: this page is meant to navigate
+  // directly via each CTA's href, same as always. Kept even after the
+  // Experience Template's href bug was fixed upstream — this is a no-op
+  // once a clean URL is already present, and costs nothing to leave in
+  // as a safety net. Delegated (not per-id) so it keeps working
+  // regardless of how many cards WPM renders or whether their ids are
+  // unique or duplicated.
+  // -------------------------------------------------------------------
+  function sanitizeCtaUrl(rawHref) {
+    if (!rawHref) return rawHref;
+    const match = rawHref.match(/^#(https?:\/\/.+)$/);
+    return match ? match[1] : rawHref;
+  }
+
+  document.getElementById('offers-grid').addEventListener('click', (e) => {
+    const link = e.target.closest('.offer-cta-btn');
+    if (!link) return;
+    const rawHref = link.getAttribute('href');
+    const cleanHref = sanitizeCtaUrl(rawHref);
+    if (cleanHref !== rawHref) {
+      e.preventDefault();
+      window.location.href = cleanHref;
+    }
+    // else: href was already fine — let the browser navigate normally
+  });
+</script>
+</body>
+</html>
