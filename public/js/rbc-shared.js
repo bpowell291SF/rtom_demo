@@ -38,6 +38,7 @@ const OFFERS = {
   '1XhHu000000Xa43KAC': 'Get more from your everyday spending',   // Retail Card TPA
   '1XhHu000000Xa27KAC': 'Save for retirement with an RRSP',       // RRSP Acquisition
   '1XhHu000000Xa22KAC': 'Grow your savings tax-free with a TFSA', // TFSA Acquisition
+  '1XhHu000000Xa48KAC': 'Lets talk about your mortgage renewal', // Mortgage Renewal 
   '1XhHu000000Xa1xKAC': 'Start your homeownership journey with an FHSA', // First Time Home Buyer with FHSA
   '1XhHu000000Xa4IKAS': 'Sending money internationally? We can help',   // International Money Transfer Trigger
 };
