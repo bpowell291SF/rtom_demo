@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RBC | Account Overview</title>
+<link rel="stylesheet" href="/css/rbc-theme.css" />
+<style>
+  /* Page-specific styles for the authenticated dashboard layout — reuses
+     the shared CSS variables (--rbc-navy, --rbc-blue, --rbc-sky) from
+     rbc-theme.css, adds only what this page needs on top. */
+
+  .quick-actions {
+    background: var(--slate-200, #e2e8f0);
+    background: #eef1f5;
+  }
+  .quick-actions .container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    padding: 1.5rem 1rem;
+  }
+  @media (min-width: 900px) {
+    .quick-actions .container { grid-template-columns: repeat(5, 1fr); }
+  }
+  .quick-action-tile {
+    background: #fff;
+    border: 1px solid var(--slate-200);
+    border-radius: 0.5rem;
+    padding: 1.25rem 1rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--rbc-blue);
+    cursor: pointer;
+    transition: box-shadow .15s ease;
+  }
+  .quick-action-tile:hover { box-shadow: 0 4px 12px rgba(0,39,77,0.1); }
+  .quick-action-tile.active { color: var(--rbc-navy); border-color: var(--rbc-navy); }
+
+  .dashboard-section { padding: 2.5rem 0; }
+  .dashboard-section h2 { color: var(--rbc-navy); font-size: 1.5rem; margin: 0 0 1.25rem; }
+
+  .account-cards, .card-cards { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+  @media (min-width: 800px) { .account-cards { grid-template-columns: 1fr 1fr; } }
+  @media (min-width: 900px) { .card-cards { grid-template-columns: repeat(3, 1fr); } }
+
+  .account-card { background: #fff; border: 1px solid var(--slate-200); border-radius: 0.5rem; overflow: hidden; }
+  .account-card-header {
+    display: flex; align-items: center; gap: 0.875rem;
+    padding: 1.25rem 1.5rem;
+  }
+  .account-card-header.checking { background: var(--rbc-sky); }
+  .account-card-header.savings { background: #E8F5EE; }
+  .account-card-icon {
+    width: 2.5rem; height: 2.5rem; border-radius: 999px; background: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 1.25rem;
+    flex-shrink: 0;
+  }
+  .account-card-header h3 { margin: 0; font-size: 1.25rem; font-weight: 600; }
+  .account-card-header.checking h3 { color: var(--rbc-blue); }
+  .account-card-header.savings h3 { color: #1a7a4c; }
+  .account-card-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; padding: 1.25rem 1.5rem; }
+  .account-card-stats .stat-label { font-size: 0.75rem; color: var(--slate-500); margin: 0 0 0.375rem; }
+  .account-card-stats .stat-value { font-size: 1rem; color: var(--slate-700); }
+  .account-card-stats .stat-value.emphasis { font-weight: 700; color: var(--rbc-navy); font-size: 1.0625rem; }
+
+  .credit-card-tile { background: #fff; border: 1px solid var(--slate-200); border-radius: 0.5rem; overflow: hidden; }
+  .credit-card-tile-header { padding: 1.25rem 1.5rem 1rem; border-bottom: 1px solid var(--slate-200); }
+  .credit-card-tile-header h3 { margin: 0; font-size: 1.1875rem; color: var(--rbc-navy); font-weight: 600; }
+  .credit-card-tile-stats { display: flex; justify-content: space-between; padding: 1rem 1.5rem; }
+  .credit-card-tile-stats .stat-value.emphasis { font-weight: 700; color: var(--rbc-navy); font-size: 1.0625rem; }
+  .credit-card-tile-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.875rem 1.5rem; background: #fafbfc; font-size: 0.8125rem; color: var(--slate-600);
+  }
+  .card-brand { font-weight: 800; letter-spacing: 0.03em; color: var(--slate-500); font-size: 0.8125rem; }
+
+  .promo-banners { display: grid; grid-template-columns: 1fr; gap: 1.25rem; padding-bottom: 3rem; }
+  @media (min-width: 800px) { .promo-banners { grid-template-columns: 1fr 1fr; } }
+  .promo-banner {
+    border-radius: 0.5rem; padding: 2rem; color: #fff; position: relative; overflow: hidden;
+    background: linear-gradient(135deg, var(--rbc-navy), var(--rbc-blue));
+  }
+  .promo-banner h3 { margin: 0 0 0.5rem; font-size: 1.375rem; }
+  .promo-banner p { margin: 0 0 1.25rem; color: var(--blue-100); max-width: 26rem; }
+  .promo-banner a {
+    display: inline-block; background: var(--rbc-yellow); color: var(--rbc-navy);
+    font-weight: 700; padding: 0.625rem 1.25rem; border-radius: 999px; font-size: 0.875rem;
+  }
+</style>
+</head>
+<body>
+
+  <!-- Demo controls — reused from other pages so this shows a real signed-in
+       persona instead of a "Login" state, matching the authenticated context. -->
+  <div class="demo-controls">
+    <div class="container">
+      <span class="label">Demo Controls</span>
+      <label>Persona
+        <select id="persona-select"></select>
+      </label>
+      <span id="auth-status" class="status-pill"></span>
+      <div class="spacer">
+        <button id="sign-in-btn" class="btn-yellow">Sign In as Selected Persona</button>
+        <button id="sign-out-btn" class="btn-dark hidden">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="topbar">
+    <div class="container">
+      <span class="topbar-label">Personal Banking</span>
+      <div class="topbar-links">
+        <a href="#">Find a Branch</a>
+        <a href="#">Contact Us</a>
+        <a href="#">EN | FR</a>
+      </div>
+    </div>
+  </div>
+
+  <header class="navbar">
+    <div class="container">
+      <div class="brand">
+        <img src="https://www.rbcroyalbank.com/dvl/assets/images/logos/rbc-logo-shield.svg" alt="RBC" />
+        <span class="brand-name">RBC</span>
+        <span class="brand-sub">Royal Bank</span>
+      </div>
+      <nav class="nav-links">
+        <a href="/">Home</a>
+        <a href="/offers">Offers</a>
+        <a href="/mortgages">Mortgages</a>
+        <a href="/account-overview" class="active">My Accounts</a>
+      </nav>
+      <button id="header-signin-btn" class="signin-btn">Sign In</button>
+    </div>
+  </header>
+
+  <section class="quick-actions">
+    <div class="container">
+      <div class="quick-action-tile active">Account<br />Overview</div>
+      <div class="quick-action-tile">RBC<br />Rewards</div>
+      <div class="quick-action-tile">Make a<br />Transfer</div>
+      <div class="quick-action-tile">Send Us a<br />Message</div>
+      <div class="quick-action-tile">Book an<br />Appointment</div>
+    </div>
+  </section>
+
+  <section class="container dashboard-section">
+    <h2 id="overview-heading">Account Overview</h2>
+    <div class="account-cards" id="account-cards-container"></div>
+  </section>
+
+  <section class="container dashboard-section" style="padding-top:0;">
+    <h2>Credit Cards</h2>
+    <div class="card-cards" id="credit-cards-container"></div>
+  </section>
+
+  <!--
+    Bottom promo banners — using 2 of the confirmed real offers already
+    established elsewhere in this project (same headings/CTA text/URLs as
+    OFFERS in rbc-shared.js), rather than generic insurance-style discounts
+    that wouldn't fit RBC's actual offer catalog.
+  -->
+  <section class="container" style="padding-bottom:3rem;">
+    <div class="promo-banners">
+      <div class="promo-banner">
+        <h3>Start your homeownership journey with an FHSA</h3>
+        <p>Combine the First Home Savings Account with a new mortgage and take the next step toward owning your first home.</p>
+        <a href="https://www.rbcroyalbank.com/mortgages/first-time-home-buyers.html">Learn More</a>
+      </div>
+      <div class="promo-banner">
+        <h3>Grow your savings tax-free with a TFSA</h3>
+        <p>Open a Tax-Free Savings Account and start growing your money without paying tax on the growth.</p>
+        <a href="https://www.rbcroyalbank.com/investments/tfsa.html">Open a TFSA Today</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; 2026 Royal Bank of Canada — Prototype demo, not an official RBC product.</p>
+      <div class="footer-links">
+        <a href="#">Legal</a>
+        <a href="#">Privacy &amp; Security</a>
+        <a href="#">Accessibility</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/rbc-shared.js"></script>
+  <script>
+    // Reuses the same persona/sign-in state as other pages. On this
+    // ---------------------------------------------------------------------
+    // Per-persona account data. Keyed by customerId (the same MDM-RBC-...
+    // values already shown elsewhere, e.g. viewlog.html), not the shorter
+    // internal persona.id, so this stays keyed the same way regardless of
+    // which identifier a linking page happens to have on hand.
+    // Numbers are illustrative, loosely themed to each persona's segment
+    // (e.g. the Retiree has more savings, the Student has smaller balances).
+    // ---------------------------------------------------------------------
+    const PERSONA_ACCOUNT_DATA = {
+      'MDM-RBC-0000006194': { // Veronica Robles — Young Professional
+        chequing: { number: '4213', lastActivity: 'Today', balance: '$3,240.18', available: '$3,180.18' },
+        savings:  { number: '0013', lastActivity: 'Jul 20, 2026', balance: '$8,500.00', available: '$8,500.00' },
+        cards: [
+          { name: 'RBC Avion Visa Infinite', available: '$6,200.00', balance: '$1,340.22', brand: 'VISA', last4: '4471', due: '8/12' },
+          { name: 'Cash Back Mastercard',     available: '$2,500.00', balance: '$412.65',   brand: 'MASTERCARD', last4: '2290', due: '8/05' },
+          { name: 'RBC ION+ Visa',            available: '$4,000.00', balance: '$88.40',    brand: 'VISA', last4: '7734', due: '8/20' },
+        ]
+      },
+      'MDM-RBC-0000002186': { // Guillaume Bouchard — New Homeowner
+        chequing: { number: '7742', lastActivity: 'Yesterday', balance: '$1,204.50', available: '$980.00' },
+        savings:  { number: '0088', lastActivity: 'Jul 15, 2026', balance: '$22,340.00', available: '$22,340.00' },
+        cards: [
+          { name: 'RBC Avion Visa Infinite', available: '$9,000.00', balance: '$3,215.60', brand: 'VISA', last4: '5521', due: '8/03' },
+          { name: 'RBC Homeline Visa',       available: '$12,000.00', balance: '$6,750.00', brand: 'VISA', last4: '9034', due: '8/18' },
+          { name: 'Cash Back Mastercard',    available: '$3,000.00', balance: '$540.10',   brand: 'MASTERCARD', last4: '1187', due: '8/09' },
+        ]
+      },
+      'MDM-RBC-0000004975': { // Benjamin Trevino — Small Business Owner
+        chequing: { number: '5560', lastActivity: 'Today', balance: '$14,802.33', available: '$14,802.33' },
+        savings:  { number: '0231', lastActivity: 'Jul 1, 2026', balance: '$45,000.00', available: '$45,000.00' },
+        cards: [
+          { name: 'RBC Business Avion Visa', available: '$20,000.00', balance: '$8,340.12', brand: 'VISA', last4: '6602', due: '8/10' },
+          { name: 'RBC Business Visa',       available: '$15,000.00', balance: '$4,560.90', brand: 'VISA', last4: '8871', due: '8/22' },
+          { name: 'Cash Back Mastercard',    available: '$5,000.00', balance: '$1,220.00',  brand: 'MASTERCARD', last4: '3345', due: '8/06' },
+        ]
+      },
+      'MDM-RBC-0000001463': { // Elizabeth Barrett — Retiree
+        chequing: { number: '4213', lastActivity: 'Today', balance: '$6,903.00', available: '$6,901.50' },
+        savings:  { number: '0013', lastActivity: 'Feb 10, 2026', balance: '$107,000.00', available: '$107,000.00' },
+        cards: [
+          { name: 'RBC Avion Visa Infinite', available: '$4,653.70', balance: '$346.30', brand: 'VISA', last4: '4553', due: '4/13' },
+          { name: 'Cash Back Mastercard',    available: '$1,598.50', balance: '$901.50', brand: 'MASTERCARD', last4: '3456', due: '4/13' },
+          { name: 'RBC ION+ Visa',           available: '$3,200.00', balance: '$120.00', brand: 'VISA', last4: '7788', due: '4/25' },
+        ]
+      },
+      'MDM-RBC-0000005392': { // Kevin Webb — Student
+        chequing: { number: '9021', lastActivity: 'Today', balance: '$456.60', available: '$410.20' },
+        savings:  { number: '0459', lastActivity: 'Jul 22, 2026', balance: '$980.00', available: '$980.00' },
+        cards: [
+          { name: 'Student Visa',         available: '$456.60', balance: '$43.40', brand: 'VISA', last4: '4556', due: '4/30' },
+          { name: 'Cash Back Mastercard', available: '$300.00', balance: '$75.20', brand: 'MASTERCARD', last4: '2201', due: '5/02' },
+          { name: 'RBC ION+ Visa',        available: '$200.00', balance: '$12.00', brand: 'VISA', last4: '9081', due: '5/10' },
+        ]
+      },
+    };
+
+    // ---------------------------------------------------------------------
+    // Query parameter support — lets another page link directly to a
+    // specific persona's account overview, e.g.:
+    //   /account-overview?customerId=MDM-RBC-0000001463
+    //   /account-overview?personaId=persona-4
+    // customerId takes priority since it's the identifier already shown
+    // elsewhere (e.g. viewlog.html). Falls back to whatever's already in
+    // session state if neither param is present or matches.
+    // ---------------------------------------------------------------------
+    function applyPersonaFromQueryParam() {
+      const params = new URLSearchParams(window.location.search);
+      const qpCustomerId = params.get('customerId');
+      const qpPersonaId = params.get('personaId');
+
+      let target = null;
+      if (qpCustomerId) target = PERSONAS.find(p => p.customerId === qpCustomerId);
+      if (!target && qpPersonaId) target = PERSONAS.find(p => p.id === qpPersonaId);
+
+      if (target) {
+        setState({ personaId: target.id, signedIn: true });
+      } else if (!getState().signedIn) {
+        // No usable query param and not already signed in — still default
+        // to signed-in so this reads as an authenticated dashboard.
+        setState({ signedIn: true });
+      }
+    }
+
+    function renderAccountData() {
+      const persona = currentPersona();
+      const data = PERSONA_ACCOUNT_DATA[persona.customerId];
+      const accountsEl = document.getElementById('account-cards-container');
+      const cardsEl = document.getElementById('credit-cards-container');
+      if (!data || !accountsEl || !cardsEl) return;
+
+      accountsEl.innerHTML = `
+        <div class="account-card">
+          <div class="account-card-header checking">
+            <div class="account-card-icon">🏦</div>
+            <h3>Chequing *${data.chequing.number}</h3>
+          </div>
+          <div class="account-card-stats">
+            <div><p class="stat-label">Last Activity</p><p class="stat-value">${data.chequing.lastActivity}</p></div>
+            <div><p class="stat-label">Balance</p><p class="stat-value">${data.chequing.balance}</p></div>
+            <div><p class="stat-label">Available</p><p class="stat-value emphasis">${data.chequing.available}</p></div>
+          </div>
+        </div>
+        <div class="account-card">
+          <div class="account-card-header savings">
+            <div class="account-card-icon">🐷</div>
+            <h3>High Interest Savings *${data.savings.number}</h3>
+          </div>
+          <div class="account-card-stats">
+            <div><p class="stat-label">Last Activity</p><p class="stat-value">${data.savings.lastActivity}</p></div>
+            <div><p class="stat-label">Balance</p><p class="stat-value">${data.savings.balance}</p></div>
+            <div><p class="stat-label">Available</p><p class="stat-value emphasis">${data.savings.available}</p></div>
+          </div>
+        </div>`;
+
+      cardsEl.innerHTML = data.cards.map(card => `
+        <div class="credit-card-tile">
+          <div class="credit-card-tile-header"><h3>${card.name}</h3></div>
+          <div class="credit-card-tile-stats">
+            <div><p class="stat-label">Available</p><p class="stat-value">${card.available}</p></div>
+            <div style="text-align:right;"><p class="stat-label">Balance</p><p class="stat-value emphasis">${card.balance}</p></div>
+          </div>
+          <div class="credit-card-tile-footer">
+            <span class="card-brand">${card.brand} •••• ${card.last4}</span>
+            <span>Payment Due ${card.due}</span>
+          </div>
+        </div>`).join('');
+    }
+
+    function updateWelcomeHeading() {
+      const persona = currentPersona();
+      const heading = document.getElementById('overview-heading');
+      if (heading) heading.textContent = getState().signedIn
+        ? `Welcome back, ${persona.name.split(' ')[0]}`
+        : 'Account Overview';
+    }
+
+    function refreshPage() {
+      updateWelcomeHeading();
+      renderAccountData();
+    }
+
+    applyPersonaFromQueryParam();
+    renderHeaderChrome();
+    wireHeaderControls(refreshPage); // re-render account data too when persona changes via demo controls
+    refreshPage();
+  </script>
+</body>
+</html>
