@@ -18,7 +18,6 @@
       <span id="auth-status" class="status-pill"></span>
       <div class="spacer">
         <button id="sign-in-btn" class="btn-yellow">Sign In as Selected Persona</button>
-        <button id="sign-out-btn" class="btn-dark hidden">Sign Out</button>
       </div>
     </div>
   </div>
@@ -45,10 +44,8 @@
         <a href="/">Home</a>
         <a href="/offers">Offers</a>
         <a href="/mortgages">Mortgages</a>
-        <a href="/rtom" style="color:#f9c23c;font-weight:700;">Diagnostics</a>
-        <a href="/rbc-wpm.html" style="color:#f9c23c;font-weight:700;">WPM</a>
+        <a href="/rtom" style="color:#f9c23c;font-weight:700;">RTOM</a>
       </nav>
-      <button id="header-signin-btn" class="signin-btn">Sign In</button>
     </div>
   </header>
 
@@ -104,14 +101,39 @@
     const grid = document.getElementById('offers-grid');
     const meta = document.getElementById('fetch-meta');
 
+    // -------------------------------------------------------------------
+    // Default offer shown to ANONYMOUS visitors on this public page.
+    // Previously this branch showed no offer at all ("sign in to see
+    // offers"). Since index.html is now the public/anonymous entry point,
+    // this represents what an anonymous-traffic-based default might look
+    // like — a placeholder to replace with a real Salesforce Personalization
+    // decision (e.g. via WPM or a Personalization Point keyed on anonymous
+    // browsing behavior rather than a signed-in individual).
+    //
+    // Uses one of the confirmed real offers already established elsewhere
+    // in this project (real Offer Id 1XhHu000000Xa43KAC — see OFFERS in
+    // rbc-shared.js), not invented placeholder content.
+    // -------------------------------------------------------------------
+    const DEFAULT_ANONYMOUS_OFFER = {
+      id: '1XhHu000000Xa43KAC',
+      contentId: null,
+      decisionId: '',
+      heading: 'Get more from your everyday spending',
+      name: 'Get more from your everyday spending',
+      body: "You're pre-qualified for a retail credit card designed around how you already spend.",
+      imageUrl: 'https://www.rbcroyalbank.com/credit-cards/activate/_assets-custom/img/bg/Desktop/Women_Computer_Large.jpg',
+      ctaText: 'See your pre-qualified card offer',
+      ctaUrl: 'https://www.rbcroyalbank.com/credit-cards/index.html'
+    };
+
     async function loadFeatured() {
       renderSkeleton(grid, 1);
       meta.textContent = 'Requesting offers from Salesforce Personalization…';
       try {
         const { offers, anonymous, requestId } = await fetchOffers({ anchorType: 'Home' });
         if (anonymous) {
-          renderStateMessage(grid, 'Sign in above to see an offer picked for you.');
-          meta.textContent = '';
+          renderOfferCards(grid, [DEFAULT_ANONYMOUS_OFFER]);
+          meta.textContent = 'Default offer (anonymous) — replace with a real Personalization decision';
           return;
         }
         if (!offers.length) {
@@ -127,9 +149,31 @@
       }
     }
 
-    setState({ channel: 'Home' });
+    setState({ signedIn: false, channel: 'Home' }); // index.html is the public/anonymous page — always reset,
+                                                     // even if a prior page in this session left signedIn:true
     renderHeaderChrome();
-    wireHeaderControls(loadFeatured);
+
+    // Custom wiring (not the shared wireHeaderControls()): this page has no
+    // local "signed in" state of its own anymore. Selecting a persona just
+    // remembers the choice; clicking "Sign In as Selected Persona" navigates
+    // to account-overview.html with that persona's customerId as a query
+    // param, which is what actually signs them in on that page.
+    const personaSelect = document.getElementById('persona-select');
+    const signInBtn = document.getElementById('sign-in-btn');
+
+    if (personaSelect) {
+      personaSelect.addEventListener('change', () => {
+        setState({ personaId: personaSelect.value });
+      });
+    }
+
+    if (signInBtn) {
+      signInBtn.addEventListener('click', () => {
+        const persona = currentPersona();
+        window.location.href = '/account-overview.html?customerId=' + encodeURIComponent(persona.customerId);
+      });
+    }
+
     loadFeatured();
   </script>
 </body>
