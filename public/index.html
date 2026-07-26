@@ -9,6 +9,15 @@
 <script type="text/javascript" src="https://cdn.c360a.salesforce.com/beacon/c360a/6ac190d2-56d8-4600-8e83-007537e3f2ff/scripts/c360a.min.js"></script>
 
 <link rel="stylesheet" href="/css/rbc-theme.css" />
+<style>
+  /* Scoped to this page only — the shared .offer-card-image rules in
+     rbc-theme.css use a shorter height (10rem) and center crop by default,
+     which cut off this particular photo's face. Not changed globally since
+     offers.html and mortgages.html share those same base rules with
+     different real images. */
+  #offers-grid .offer-card-image { height: 20rem; }
+  #offers-grid .offer-card-image img { object-position: top; }
+</style>
 </head>
 <body>
 
